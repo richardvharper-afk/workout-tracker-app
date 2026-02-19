@@ -65,6 +65,7 @@ export function mapRowToWorkout(row: any[], rowIndex: number): Workout {
     avgRir: parseOptionalNumber(row[SHEET_COLUMNS.AVG_RIR]),
     done: parseBoolean(row[SHEET_COLUMNS.DONE]),
     lastSaved: getString(row[SHEET_COLUMNS.LAST_SAVED]) || undefined,
+    videoUrl: getString(row[SHEET_COLUMNS.VIDEO_URL]) || undefined,
   }
 }
 
@@ -72,7 +73,7 @@ export function mapRowToWorkout(row: any[], rowIndex: number): Workout {
  * Convert a Workout object to a sheet row
  */
 export function mapWorkoutToRow(workout: Workout): any[] {
-  const row = new Array(21).fill('') // Initialize with 21 empty cells
+  const row = new Array(22).fill('') // Initialize with 22 empty cells
 
   // Helper to format optional values
   const formatOptional = (value: any): string => {
@@ -100,6 +101,7 @@ export function mapWorkoutToRow(workout: Workout): any[] {
   row[SHEET_COLUMNS.AVG_RIR] = formatOptional(workout.avgRir)
   row[SHEET_COLUMNS.DONE] = workout.done ? 'TRUE' : 'FALSE'
   row[SHEET_COLUMNS.LAST_SAVED] = workout.lastSaved || new Date().toISOString()
+  row[SHEET_COLUMNS.VIDEO_URL] = workout.videoUrl || ''
 
   return row
 }

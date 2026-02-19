@@ -25,6 +25,7 @@ export interface Workout {
   avgRir?: number // Column 18 (average RIR from sets)
   done: boolean // Column 19
   lastSaved?: string // Column 20 (ISO timestamp)
+  videoUrl?: string // Column 21
 }
 
 export type WorkoutType =

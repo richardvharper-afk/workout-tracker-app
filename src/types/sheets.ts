@@ -59,6 +59,7 @@ export const SHEET_COLUMNS = {
   AVG_RIR: 18,
   DONE: 19,
   LAST_SAVED: 20,
+  VIDEO_URL: 21,
 } as const
 
-export const TOTAL_COLUMNS = 21
+export const TOTAL_COLUMNS = 22
