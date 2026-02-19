@@ -1,6 +1,6 @@
 # Workout Tracker
 
-A mobile-first web application for tracking gym workouts with a single-exercise card view, calendar visualization, and performance analytics. Uses Google Sheets as the backend data store and is deployed on Vercel.
+A mobile-first web application for tracking gym workouts with a single-exercise card view (with swipe navigation), calendar visualization, and performance analytics. Uses Google Sheets as the backend data store and is deployed on Vercel.
 
 **Live URL**: https://workout-tracker-sigma-ten.vercel.app
 
