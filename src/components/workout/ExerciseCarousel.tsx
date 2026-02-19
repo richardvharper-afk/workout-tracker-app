@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Workout, WorkoutPerformanceData } from '@/types/workout'
 import { useUpdateWorkout } from '@/lib/hooks/useWorkouts'
 import { SetInputGroup } from '@/components/workout/SetInput'
@@ -148,6 +148,34 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
     if (currentIndex < totalExercises - 1) setCurrentIndex(currentIndex + 1)
   }
 
+  // Swipe gesture handling
+  const touchStartX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }, [])
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current
+    touchStartX.current = null
+    touchStartY.current = null
+
+    // Only trigger if horizontal swipe is dominant and > 50px
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+      if (deltaX < 0) {
+        // Swipe left → next
+        if (currentIndex < totalExercises - 1) setCurrentIndex(prev => prev + 1)
+      } else {
+        // Swipe right → prev
+        if (currentIndex > 0) setCurrentIndex(prev => prev - 1)
+      }
+    }
+  }, [currentIndex, totalExercises])
+
   const handleWeekChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setCurrentWeek(Number(e.target.value))
   }
@@ -203,9 +231,9 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
         </div>
       )}
 
-      {/* Exercise Card */}
+      {/* Exercise Card (swipeable) */}
       {currentExercise ? (
-        <>
+        <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           {/* Exercise Info */}
           <div className="glass-card p-4">
             <div className="flex items-start justify-between mb-4">
@@ -336,7 +364,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
               </p>
             )}
           </div>
-        </>
+        </div>
       ) : (
         <div className="glass-card p-6 text-center">
           <p className="text-text-secondary">No exercises found for this week/day.</p>
