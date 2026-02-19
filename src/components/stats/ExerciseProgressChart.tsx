@@ -9,6 +9,7 @@ const Line = dynamic(() => import('recharts').then(m => m.Line), { ssr: false })
 const XAxis = dynamic(() => import('recharts').then(m => m.XAxis), { ssr: false })
 const YAxis = dynamic(() => import('recharts').then(m => m.YAxis), { ssr: false })
 const Tooltip = dynamic(() => import('recharts').then(m => m.Tooltip), { ssr: false })
+const Legend = dynamic(() => import('recharts').then(m => m.Legend), { ssr: false })
 const ResponsiveContainer = dynamic(() => import('recharts').then(m => m.ResponsiveContainer), { ssr: false })
 
 interface ExerciseProgressChartProps {
@@ -22,8 +23,8 @@ export function ExerciseProgressChart({ data }: ExerciseProgressChartProps) {
 
   const chartData = exerciseData?.weeks.map(w => ({
     week: w.week,
-    load: parseFloat(w.load) || 0,
-    reps: w.reps,
+    volume: w.volume,
+    peakRep: w.peakRep,
   })) || []
 
   if (data.length === 0) {
@@ -31,7 +32,7 @@ export function ExerciseProgressChart({ data }: ExerciseProgressChartProps) {
       <div className="glass-card p-6">
         <h3 className="text-sm font-semibold text-text-primary mb-4">Exercise Progress</h3>
         <p className="text-text-tertiary text-sm text-center py-8">
-          Complete workouts to track exercise progress
+          Save workouts to track exercise progress
         </p>
       </div>
     )
@@ -82,21 +83,24 @@ export function ExerciseProgressChart({ data }: ExerciseProgressChartProps) {
                 }}
                 labelFormatter={(v) => `Week ${v}`}
               />
-              <Line
-                type="monotone"
-                dataKey="load"
-                stroke="#00d4ff"
-                strokeWidth={2}
-                dot={{ fill: '#00d4ff', r: 3 }}
-                name="Load"
+              <Legend
+                wrapperStyle={{ fontSize: 11, color: '#9a9ab0' }}
               />
               <Line
                 type="monotone"
-                dataKey="reps"
-                stroke="#7b61ff"
+                dataKey="volume"
+                stroke="#00d4ff"
                 strokeWidth={2}
-                dot={{ fill: '#7b61ff', r: 3 }}
-                name="Reps"
+                dot={{ fill: '#00d4ff', r: 3 }}
+                name="Total Volume"
+              />
+              <Line
+                type="monotone"
+                dataKey="peakRep"
+                stroke="#00ff94"
+                strokeWidth={2}
+                dot={{ fill: '#00ff94', r: 3 }}
+                name="Peak Rep"
               />
             </LineChart>
           </ResponsiveContainer>

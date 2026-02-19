@@ -7,7 +7,7 @@ import { StatCard } from './StatCard'
 import { VolumeChart } from './VolumeChart'
 import { ExerciseProgressChart } from './ExerciseProgressChart'
 import { StreakCalendar } from './StreakCalendar'
-import { CompletionRateChart } from './CompletionRateChart'
+import { VolumeByTypeChart } from './VolumeByTypeChart'
 
 interface StatsOverviewProps {
   workouts: Workout[]
@@ -26,13 +26,13 @@ export function StatsOverview({ workouts }: StatsOverviewProps) {
           color="green"
         />
         <StatCard
-          value={stats.streak}
-          label="Current Streak"
+          value={`${stats.daysCompletedRate}%`}
+          label="Days Completed"
           color="cyan"
         />
         <StatCard
-          value={stats.weeklyVolume.toLocaleString()}
-          label="Weekly Volume"
+          value={stats.volumeChange !== null ? `${stats.volumeChange > 0 ? '+' : ''}${stats.volumeChange}%` : '--'}
+          label="Volume vs Prev Wk"
           color="purple"
         />
         <StatCard
@@ -48,10 +48,10 @@ export function StatsOverview({ workouts }: StatsOverviewProps) {
       {/* Volume chart */}
       <VolumeChart data={stats.volumeByWeek} />
 
-      {/* Completion rate donut */}
-      <CompletionRateChart
-        completed={stats.totalCompleted}
-        total={stats.totalWorkouts}
+      {/* Volume by type */}
+      <VolumeByTypeChart
+        data={stats.volumeByType.data}
+        types={stats.volumeByType.types}
       />
 
       {/* Exercise progress */}

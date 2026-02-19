@@ -29,26 +29,72 @@ export function Calendar({ workouts }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
 
-  // Map workouts to calendar days using week/day numbers
-  // We create a simple mapping: week 1 day 1 = first Monday-like day pattern
+  // Schedule: Day 1 = Monday, Day 2 = Wednesday, Day 3 = Friday
+  const DAY_OFFSETS: Record<number, number> = { 1: 0, 2: 2, 3: 4 }
+
+  // Map workouts to calendar days:
+  // 1. Find calendar dates from saved workouts (lastSaved)
+  // 2. For each date, include ALL exercises from that week+day (saved and unsaved)
+  // 3. Place planned (fully unsaved) days using Mon/Wed/Fri schedule
   const workoutsByDay = useMemo(() => {
     const map: Record<string, Workout[]> = {}
-    workouts.forEach(w => {
-      // Map week+day to a calendar day offset
-      // Assuming week 1 starts at the beginning of the year's program
-      const dayOffset = (w.week - 1) * 7 + (w.day - 1)
-      // Use a reference start date (Jan 1 of current year as program start)
-      const startDate = new Date(currentYear, 0, 1)
-      const date = new Date(startDate)
-      date.setDate(startDate.getDate() + dayOffset)
 
+    // Infer Week 1 Monday from a saved workout
+    let week1Monday: Date | null = null
+    const saved = workouts.find(w => w.lastSaved && DAY_OFFSETS[w.day] !== undefined)
+    if (saved) {
+      const savedDate = new Date(saved.lastSaved!)
+      savedDate.setHours(0, 0, 0, 0)
+      const totalOffset = (saved.week - 1) * 7 + (DAY_OFFSETS[saved.day] ?? 0)
+      week1Monday = new Date(savedDate)
+      week1Monday.setDate(savedDate.getDate() - totalOffset)
+    }
+
+    // Track which week+day combos have a calendar date from saved data
+    // key: "week-day", value: calendar day number
+    const weekDayToCalendarDay: Record<string, number> = {}
+
+    // First pass: place saved workouts and record their calendar dates
+    workouts.forEach(w => {
+      if (!w.lastSaved) return
+      const date = new Date(w.lastSaved)
       if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
         const dayNum = date.getDate()
         const key = String(dayNum)
         if (!map[key]) map[key] = []
         map[key].push(w)
+        weekDayToCalendarDay[`${w.week}-${w.day}`] = dayNum
       }
     })
+
+    // Second pass: place unsaved workouts on the same calendar date as
+    // their saved siblings, or use Mon/Wed/Fri schedule for fully unsaved days
+    workouts.forEach(w => {
+      if (w.lastSaved) return // already placed
+
+      const wdKey = `${w.week}-${w.day}`
+      let dayNum: number | null = null
+
+      if (weekDayToCalendarDay[wdKey] !== undefined) {
+        // Some exercises in this week+day were saved — use the same date
+        dayNum = weekDayToCalendarDay[wdKey]
+      } else if (week1Monday && DAY_OFFSETS[w.day] !== undefined) {
+        // Fully unsaved day — use schedule offset
+        const totalOffset = (w.week - 1) * 7 + DAY_OFFSETS[w.day]
+        const date = new Date(week1Monday)
+        date.setDate(week1Monday.getDate() + totalOffset)
+        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+          dayNum = date.getDate()
+        }
+      }
+
+      if (dayNum !== null) {
+        const key = String(dayNum)
+        if (!map[key]) map[key] = []
+        map[key].push(w)
+      }
+    })
+
     return map
   }, [workouts, currentMonth, currentYear])
 

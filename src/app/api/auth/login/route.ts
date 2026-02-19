@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { googleAuth } from '@/lib/google-sheets/auth'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Login handler
  * Redirects to Google OAuth consent screen

@@ -83,7 +83,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   }, [workouts, currentWeek, currentDay])
 
   const currentExercise = exercises[currentIndex] || null
-  const isReadOnly = !!(currentExercise?.lastSaved)
+  const isReadOnly = !!(currentExercise?.done)
   const totalExercises = exercises.length
 
   // Sync performance data when current exercise changes
@@ -131,12 +131,12 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
     const result = await updateWorkout(currentExercise.id, performanceData)
     if (result) {
       setHasChanges(false)
-      refetch()
-      // Auto-advance to next unsaved exercise
-      const nextUnsaved = exercises.findIndex((ex, i) => i > currentIndex && !ex.lastSaved)
-      if (nextUnsaved !== -1) {
-        setCurrentIndex(nextUnsaved)
+      // Auto-advance to the next exercise in the same day before refetching
+      const nextIndex = currentIndex + 1
+      if (nextIndex < totalExercises) {
+        setCurrentIndex(nextIndex)
       }
+      refetch()
     }
   }
 
@@ -164,7 +164,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
     )
   }
 
-  const allDayCompleted = exercises.length > 0 && exercises.every(ex => ex.lastSaved)
+  const allDayCompleted = exercises.length > 0 && exercises.every(ex => ex.done)
 
   return (
     <div className="space-y-4">

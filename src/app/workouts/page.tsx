@@ -11,8 +11,13 @@ import Link from 'next/link'
 
 export default function WorkoutsPage() {
   const { workouts, loading, error, refetch } = useWorkouts()
+  const [initialLoad, setInitialLoad] = React.useState(true)
 
-  if (loading) {
+  React.useEffect(() => {
+    if (!loading && initialLoad) setInitialLoad(false)
+  }, [loading, initialLoad])
+
+  if (loading && initialLoad) {
     return <FullPageSpinner />
   }
 

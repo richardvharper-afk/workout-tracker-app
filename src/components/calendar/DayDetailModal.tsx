@@ -83,16 +83,30 @@ export function DayDetailModal({ isOpen, onClose, date, workouts }: DayDetailMod
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium truncate ${workout.done ? 'text-text-secondary' : 'text-text-primary'}`}>
+                <p className={`text-sm font-medium truncate ${workout.lastSaved ? 'text-text-secondary' : 'text-text-primary'}`}>
                   {workout.exercise}
                 </p>
                 <p className="text-xs text-text-tertiary">
                   {workout.sets}×{workout.reps} · {workout.section}
                 </p>
+                {workout.lastSaved && (
+                  <div className="flex flex-wrap gap-x-2 mt-1">
+                    {[workout.set1, workout.set2, workout.set3, workout.set4, workout.set5]
+                      .filter((s): s is number => s !== undefined && s !== null)
+                      .map((rep, i) => (
+                        <span key={i} className="text-xs text-accent-cyan">
+                          S{i + 1}: {rep}
+                        </span>
+                      ))}
+                    {workout.avgRir !== undefined && (
+                      <span className="text-xs text-accent-purple">RIR: {workout.avgRir}</span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {workout.load && (
-                <span className="text-xs text-accent-cyan">{workout.load}</span>
+                <span className="text-xs text-accent-cyan font-medium">{workout.load}</span>
               )}
             </button>
           ))}

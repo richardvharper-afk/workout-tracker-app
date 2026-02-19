@@ -4,8 +4,10 @@ import { useMemo } from 'react'
 import { Workout } from '@/types/workout'
 import {
   calculateStreak,
-  calculateWeeklyVolume,
+  calculateVolumeChange,
+  calculateDaysCompletedRate,
   groupVolumeByWeek,
+  groupVolumeByType,
   groupByExercise,
   calculateCompletionRate,
 } from '@/lib/utils/stats'
@@ -14,17 +16,21 @@ export function useStats(workouts: Workout[]) {
   const stats = useMemo(() => {
     const totalCompleted = workouts.filter(w => w.done).length
     const streak = calculateStreak(workouts)
-    const weeklyVolume = calculateWeeklyVolume(workouts)
+    const volumeChange = calculateVolumeChange(workouts)
     const completionRate = calculateCompletionRate(workouts)
+    const daysCompletedRate = calculateDaysCompletedRate(workouts)
     const volumeByWeek = groupVolumeByWeek(workouts)
     const exerciseProgress = groupByExercise(workouts)
+    const volumeByType = groupVolumeByType(workouts)
 
     return {
       totalCompleted,
       streak,
-      weeklyVolume,
+      volumeChange,
       completionRate,
+      daysCompletedRate,
       volumeByWeek,
+      volumeByType,
       exerciseProgress,
       totalWorkouts: workouts.length,
     }
