@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Navigation } from '@/components/layout/Navigation'
 import { Container } from '@/components/layout/Container'
@@ -46,6 +46,12 @@ export default function VideosPage() {
       .sort((a, b) => a.exercise.localeCompare(b.exercise))
   }, [workouts])
 
+  useEffect(() => {
+    if (exerciseVideos.length > 0 && !selectedExercise) {
+      setSelectedExercise(exerciseVideos[0].exercise)
+    }
+  }, [exerciseVideos, selectedExercise])
+
   const selectedVideo = exerciseVideos.find(v => v.exercise === selectedExercise)
   const embedUrl = selectedVideo ? getYouTubeEmbedUrl(selectedVideo.url) : null
 
@@ -74,7 +80,6 @@ export default function VideosPage() {
               onChange={(e) => setSelectedExercise(e.target.value)}
               className="w-full p-3 rounded-lg bg-dark-secondary border border-glass-border text-text-primary focus:outline-none focus:border-accent-cyan"
             >
-              <option value="">Select an exercise...</option>
               {exerciseVideos.map(({ exercise }) => (
                 <option key={exercise} value={exercise}>
                   {exercise}
