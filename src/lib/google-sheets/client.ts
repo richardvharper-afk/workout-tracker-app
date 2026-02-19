@@ -39,7 +39,7 @@ export class GoogleSheetsClient {
       throw new Error('Sheets client not initialized')
     }
 
-    const fullRange = range || `${GOOGLE_SHEETS_CONFIG.sheetName}!A${GOOGLE_SHEETS_CONFIG.dataStartRow}:U`
+    const fullRange = range || `${GOOGLE_SHEETS_CONFIG.sheetName}!A${GOOGLE_SHEETS_CONFIG.dataStartRow}:V`
 
     try {
       const response = await this.retryWithBackoff(async () => {
@@ -64,7 +64,7 @@ export class GoogleSheetsClient {
       throw new Error('Sheets client not initialized')
     }
 
-    const range = `${GOOGLE_SHEETS_CONFIG.sheetName}!A${rowNumber}:U${rowNumber}`
+    const range = `${GOOGLE_SHEETS_CONFIG.sheetName}!A${rowNumber}:V${rowNumber}`
 
     try {
       const response = await this.retryWithBackoff(async () => {
@@ -90,7 +90,7 @@ export class GoogleSheetsClient {
       throw new Error('Sheets client not initialized')
     }
 
-    const range = `${GOOGLE_SHEETS_CONFIG.sheetName}!A${rowNumber}:U${rowNumber}`
+    const range = `${GOOGLE_SHEETS_CONFIG.sheetName}!A${rowNumber}:V${rowNumber}`
 
     try {
       await this.retryWithBackoff(async () => {
@@ -117,7 +117,7 @@ export class GoogleSheetsClient {
       throw new Error('Sheets client not initialized')
     }
 
-    const range = `${GOOGLE_SHEETS_CONFIG.sheetName}!A:U`
+    const range = `${GOOGLE_SHEETS_CONFIG.sheetName}!A:V`
 
     try {
       const response = await this.retryWithBackoff(async () => {
@@ -131,7 +131,7 @@ export class GoogleSheetsClient {
         })
       })
 
-      // Extract row number from the update range (e.g., "Workouts!A10:U10")
+      // Extract row number from the update range (e.g., "Workouts!A10:V10")
       const updatedRange = response.data.updates?.updatedRange || ''
       const match = updatedRange.match(/!A(\d+):/)
       const rowNumber = match ? parseInt(match[1], 10) : -1
