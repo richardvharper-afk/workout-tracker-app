@@ -26,6 +26,8 @@ export interface Workout {
   done: boolean // Column 19
   lastSaved?: string // Column 20 (ISO timestamp)
   videoUrl?: string // Column 21
+  rowIndex?: string // Column 22 (position index)
+  muscleGroup?: string // Column 23 (priority muscle group)
 }
 
 export type WorkoutType =

@@ -66,6 +66,8 @@ export function mapRowToWorkout(row: any[], rowIndex: number): Workout {
     done: parseBoolean(row[SHEET_COLUMNS.DONE]),
     lastSaved: getString(row[SHEET_COLUMNS.LAST_SAVED]) || undefined,
     videoUrl: getString(row[SHEET_COLUMNS.VIDEO_URL]) || undefined,
+    rowIndex: getString(row[SHEET_COLUMNS.ROW_INDEX]) || undefined,
+    muscleGroup: getString(row[SHEET_COLUMNS.MUSCLE_GROUP]) || undefined,
   }
 }
 
@@ -73,7 +75,7 @@ export function mapRowToWorkout(row: any[], rowIndex: number): Workout {
  * Convert a Workout object to a sheet row
  */
 export function mapWorkoutToRow(workout: Workout): any[] {
-  const row = new Array(22).fill('') // Initialize with 22 empty cells
+  const row = new Array(24).fill('') // Initialize with 24 empty cells
 
   // Helper to format optional values
   const formatOptional = (value: any): string => {
@@ -102,6 +104,8 @@ export function mapWorkoutToRow(workout: Workout): any[] {
   row[SHEET_COLUMNS.DONE] = workout.done ? 'TRUE' : 'FALSE'
   row[SHEET_COLUMNS.LAST_SAVED] = workout.lastSaved || new Date().toISOString()
   row[SHEET_COLUMNS.VIDEO_URL] = workout.videoUrl || ''
+  row[SHEET_COLUMNS.ROW_INDEX] = workout.rowIndex || ''
+  row[SHEET_COLUMNS.MUSCLE_GROUP] = workout.muscleGroup || ''
 
   return row
 }

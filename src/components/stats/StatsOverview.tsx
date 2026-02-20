@@ -8,6 +8,7 @@ import { VolumeChart } from './VolumeChart'
 import { ExerciseProgressChart } from './ExerciseProgressChart'
 import { StreakCalendar } from './StreakCalendar'
 import { VolumeByTypeChart } from './VolumeByTypeChart'
+import { MuscleHeatmap } from './MuscleHeatmap'
 
 interface StatsOverviewProps {
   workouts: Workout[]
@@ -53,6 +54,9 @@ export function StatsOverview({ workouts }: StatsOverviewProps) {
         data={stats.volumeByType.data}
         types={stats.volumeByType.types}
       />
+
+      {/* Muscle heatmap */}
+      <MuscleHeatmap workouts={workouts} />
 
       {/* Exercise progress */}
       <ExerciseProgressChart data={stats.exerciseProgress} />
