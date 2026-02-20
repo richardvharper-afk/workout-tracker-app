@@ -60,6 +60,8 @@ export function Navigation() {
       className="fixed bottom-0 left-0 right-0 z-40 bg-dark-secondary/80 backdrop-blur-lg border-t border-glass-border"
       style={{
         paddingBottom: 'var(--safe-area-inset-bottom)',
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)',
       }}
     >
       <div className="flex items-center justify-around h-16 relative">
