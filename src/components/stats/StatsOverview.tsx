@@ -14,7 +14,8 @@ interface StatsOverviewProps {
   workouts: Workout[]
 }
 
-export function StatsOverview({ workouts }: StatsOverviewProps) {
+export function StatsOverview({ workouts: allWorkouts }: StatsOverviewProps) {
+  const workouts = allWorkouts.filter(w => w.section !== 'Cool-down' && w.section !== 'Warm-up')
   const stats = useStats(workouts)
 
   return (
