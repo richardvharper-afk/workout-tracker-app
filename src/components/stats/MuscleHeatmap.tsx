@@ -47,13 +47,32 @@ function normalizeMuscle(raw: string): string {
     'abs': 'core',
     'abdominals': 'core',
     'obliques': 'core',
+    'transverse abdominis': 'core',
+    'rectus abdominis': 'core',
+    'lower abs': 'core',
+    'upper abs': 'core',
     'calves': 'calves',
     'calf': 'calves',
     'hip flexors': 'hip flexors',
     'hip': 'hip flexors',
     'hips': 'hip flexors',
   }
-  return aliases[lower] || lower
+  if (aliases[lower]) return aliases[lower]
+  // Fuzzy fallback: check if the name contains a known keyword
+  if (lower.includes('chest') || lower.includes('pec')) return 'chest'
+  if (lower.includes('shoulder') || lower.includes('delt')) return 'shoulders'
+  if (lower.includes('bicep')) return 'biceps'
+  if (lower.includes('tricep')) return 'triceps'
+  if (lower.includes('forearm')) return 'forearms'
+  if (lower.includes('quad')) return 'quads'
+  if (lower.includes('hamstring') || lower.includes('ham')) return 'hamstrings'
+  if (lower.includes('glute')) return 'glutes'
+  if (lower.includes('calf') || lower.includes('calve')) return 'calves'
+  if (lower.includes('ab') || lower.includes('core') || lower.includes('oblique')) return 'core'
+  if (lower.includes('back') || lower.includes('lat') || lower.includes('rhomboid') || lower.includes('erector')) return 'back'
+  if (lower.includes('trap')) return 'shoulders'
+  if (lower.includes('hip')) return 'hip flexors'
+  return lower
 }
 
 // Color interpolation from dim to bright green based on intensity ratio
