@@ -8,7 +8,9 @@ interface StreakCalendarProps {
   streak: number
 }
 
-export function StreakCalendar({ workouts, streak }: StreakCalendarProps) {
+export function StreakCalendar({ workouts: allWorkouts, streak }: StreakCalendarProps) {
+  // Filter out workouts with invalid week/day (e.g., week 0 from empty cells)
+  const workouts = allWorkouts.filter(w => w.week >= 1)
   // Build a 12-week grid (last 12 weeks worth of program days)
   const maxWeek = Math.max(...workouts.map(w => w.week), 1)
   const startWeek = Math.max(1, maxWeek - 11)
