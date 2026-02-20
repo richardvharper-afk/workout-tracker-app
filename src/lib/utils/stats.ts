@@ -8,6 +8,13 @@ export function parseReps(reps: string): number {
   return parseInt(reps) || 0
 }
 
+export function parseMaxReps(reps: string): number {
+  // Extract highest number from reps string: "5-7" -> 7, "3min total" -> 3, "10" -> 10
+  const numbers = reps.match(/\d+/g)
+  if (!numbers) return 0
+  return Math.max(...numbers.map(Number))
+}
+
 export function calculateStreak(workouts: Workout[]): number {
   // Group workouts by week-day, check consecutive days with completed exercises
   const dayKeys = new Map<string, boolean>()
@@ -115,11 +122,11 @@ export function groupVolumeByWeek(workouts: Workout[]): WeeklyVolumeData[] {
 
 export interface ExerciseProgressData {
   exercise: string
-  weeks: { week: number; volume: number; peakRep: number }[]
+  weeks: { week: number; volume: number; peakRep: number; targetVolume: number }[]
 }
 
 export function groupByExercise(workouts: Workout[]): ExerciseProgressData[] {
-  const exerciseMap = new Map<string, Map<number, { volume: number; peakRep: number }>>()
+  const exerciseMap = new Map<string, Map<number, { volume: number; peakRep: number; targetVolume: number }>>()
 
   workouts.forEach(w => {
     if (!w.lastSaved) return
@@ -129,6 +136,7 @@ export function groupByExercise(workouts: Workout[]): ExerciseProgressData[] {
 
     const volume = sets.reduce((a, b) => a + b, 0)
     const peakRep = Math.max(...sets)
+    const targetVolume = w.sets * parseMaxReps(w.reps || '')
 
     if (!exerciseMap.has(w.exercise)) {
       exerciseMap.set(w.exercise, new Map())
@@ -138,8 +146,9 @@ export function groupByExercise(workouts: Workout[]): ExerciseProgressData[] {
     if (existing) {
       existing.volume += volume
       existing.peakRep = Math.max(existing.peakRep, peakRep)
+      existing.targetVolume += targetVolume
     } else {
-      weekMap.set(w.week, { volume, peakRep })
+      weekMap.set(w.week, { volume, peakRep, targetVolume })
     }
   })
 

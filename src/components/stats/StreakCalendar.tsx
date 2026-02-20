@@ -13,15 +13,20 @@ export function StreakCalendar({ workouts, streak }: StreakCalendarProps) {
   const maxWeek = Math.max(...workouts.map(w => w.week), 1)
   const startWeek = Math.max(1, maxWeek - 11)
 
-  const weeks: { week: number; days: { day: number; count: number; done: boolean }[] }[] = []
+  // Calculate daily volumes to determine color thresholds
+  const weeks: { week: number; days: { day: number; volume: number; done: boolean }[] }[] = []
+  let maxVolume = 0
 
   for (let w = startWeek; w <= maxWeek; w++) {
     const weekWorkouts = workouts.filter(wo => wo.week === w)
-    const dayMap = new Map<number, { count: number; done: boolean }>()
+    const dayMap = new Map<number, { volume: number; done: boolean }>()
 
     weekWorkouts.forEach(wo => {
-      const existing = dayMap.get(wo.day) || { count: 0, done: true }
-      existing.count++
+      const existing = dayMap.get(wo.day) || { volume: 0, done: true }
+      const reps = [wo.set1, wo.set2, wo.set3, wo.set4, wo.set5]
+        .filter((s): s is number => s !== undefined && s !== null)
+        .reduce((a, b) => a + b, 0)
+      existing.volume += reps
       if (!wo.done) existing.done = false
       dayMap.set(wo.day, existing)
     })
@@ -30,23 +35,24 @@ export function StreakCalendar({ workouts, streak }: StreakCalendarProps) {
       .map(([day, data]) => ({ day, ...data }))
       .sort((a, b) => a.day - b.day)
 
+    days.forEach(d => { if (d.volume > maxVolume) maxVolume = d.volume })
+
     // Pad to 7 days
     const paddedDays = Array.from({ length: 7 }, (_, i) => {
       const found = days.find(d => d.day === i + 1)
-      return found || { day: i + 1, count: 0, done: false }
+      return found || { day: i + 1, volume: 0, done: false }
     })
 
     weeks.push({ week: w, days: paddedDays })
   }
 
-  const getIntensity = (count: number, done: boolean) => {
-    if (count === 0) return 'bg-glass-bg'
-    if (done) {
-      if (count >= 5) return 'bg-accent-green shadow-[0_0_6px_rgba(0,255,148,0.4)]'
-      if (count >= 3) return 'bg-accent-green/70'
-      return 'bg-accent-green/40'
-    }
-    return 'bg-accent-amber/40'
+  const getIntensity = (volume: number, done: boolean) => {
+    if (volume === 0) return 'bg-glass-bg'
+    if (!done) return 'bg-accent-amber/40'
+    const ratio = maxVolume > 0 ? volume / maxVolume : 0
+    if (ratio >= 0.75) return 'bg-accent-green shadow-[0_0_6px_rgba(0,255,148,0.4)]'
+    if (ratio >= 0.5) return 'bg-accent-green/70'
+    return 'bg-accent-green/40'
   }
 
   return (
@@ -65,8 +71,8 @@ export function StreakCalendar({ workouts, streak }: StreakCalendarProps) {
             {week.days.map(day => (
               <div
                 key={`${week.week}-${day.day}`}
-                className={`w-3 h-3 rounded-sm ${getIntensity(day.count, day.done)}`}
-                title={`Week ${week.week} Day ${day.day}: ${day.count} exercises`}
+                className={`w-3 h-3 rounded-sm ${getIntensity(day.volume, day.done)}`}
+                title={`Week ${week.week} Day ${day.day}: ${day.volume} total reps`}
               />
             ))}
           </div>

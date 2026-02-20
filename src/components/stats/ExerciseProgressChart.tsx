@@ -25,6 +25,7 @@ export function ExerciseProgressChart({ data }: ExerciseProgressChartProps) {
     week: w.week,
     volume: w.volume,
     peakRep: w.peakRep,
+    targetVolume: w.targetVolume,
   })) || []
 
   if (data.length === 0) {
@@ -93,6 +94,15 @@ export function ExerciseProgressChart({ data }: ExerciseProgressChartProps) {
                 strokeWidth={2}
                 dot={{ fill: '#00d4ff', r: 3 }}
                 name="Total Volume"
+              />
+              <Line
+                type="monotone"
+                dataKey="targetVolume"
+                stroke="#ff6b9d"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={{ fill: '#ff6b9d', r: 3 }}
+                name="Target Volume"
               />
               <Line
                 type="monotone"
