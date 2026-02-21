@@ -83,7 +83,7 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
 
       {workout.section && (
         <div className="mt-2 text-xs text-text-tertiary">
-          Section: {workout.section}
+          Section: {workout.section}{workout.muscleGroup ? ` · ${workout.muscleGroup}` : ''}
         </div>
       )}
     </Card>

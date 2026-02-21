@@ -240,7 +240,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
               <div>
                 <h2 className="text-xl font-bold text-text-primary">{currentExercise.exercise}</h2>
                 <p className="text-sm text-text-secondary mt-1">
-                  Week {currentExercise.week} · Day {currentExercise.day} · {currentExercise.section}
+                  Week {currentExercise.week} · Day {currentExercise.day} · {currentExercise.section}{currentExercise.muscleGroup ? ` · ${currentExercise.muscleGroup}` : ''}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2">

@@ -119,7 +119,7 @@ export function DayCard({ week, day, workouts }: DayCardProps) {
               </div>
 
               <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${typeColors[workout.type] || 'bg-glass-bg text-text-secondary'}`}>
-                {workout.section}
+                {workout.section}{workout.muscleGroup ? ` · ${workout.muscleGroup}` : ''}
               </span>
             </button>
           ))}
