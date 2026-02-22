@@ -102,7 +102,7 @@ export function mapWorkoutToRow(workout: Workout): any[] {
   row[SHEET_COLUMNS.LOAD] = workout.load || ''
   row[SHEET_COLUMNS.AVG_RIR] = formatOptional(workout.avgRir)
   row[SHEET_COLUMNS.DONE] = workout.done ? 'TRUE' : 'FALSE'
-  row[SHEET_COLUMNS.LAST_SAVED] = workout.lastSaved || new Date().toISOString()
+  row[SHEET_COLUMNS.LAST_SAVED] = workout.lastSaved || ''
   row[SHEET_COLUMNS.VIDEO_URL] = workout.videoUrl || ''
   row[SHEET_COLUMNS.ROW_INDEX] = workout.rowIndex || ''
   row[SHEET_COLUMNS.MUSCLE_GROUP] = workout.muscleGroup || ''

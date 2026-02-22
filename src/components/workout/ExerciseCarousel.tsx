@@ -34,15 +34,17 @@ function findDefaultDay(workouts: Workout[]): DayKey {
 
   if (dayKeys.length === 0) return { week: 1, day: 1 }
 
-  let lastSavedIdx = -1
+  // Find the last day where ALL exercises have been completed (done + lastSaved)
+  let lastCompletedIdx = -1
   dayKeys.forEach((dk, idx) => {
     const dayWorkouts = workouts.filter(w => w.week === dk.week && w.day === dk.day)
-    if (dayWorkouts.some(w => w.lastSaved)) {
-      lastSavedIdx = idx
+    if (dayWorkouts.length > 0 && dayWorkouts.every(w => w.done && w.lastSaved)) {
+      lastCompletedIdx = idx
     }
   })
 
-  const targetIdx = lastSavedIdx + 1
+  // Default to the next incomplete day, but only advance by 1
+  const targetIdx = lastCompletedIdx + 1
   return dayKeys[targetIdx] || dayKeys[dayKeys.length - 1]
 }
 

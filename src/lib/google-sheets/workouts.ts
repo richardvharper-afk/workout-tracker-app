@@ -64,7 +64,6 @@ export class WorkoutsService {
     const workout: Partial<Workout> = {
       ...data,
       done: false,
-      lastSaved: new Date().toISOString(),
     }
 
     const row = mapWorkoutToRow(workout as Workout)
