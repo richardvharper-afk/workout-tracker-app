@@ -3,10 +3,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Workout, WorkoutPerformanceData } from '@/types/workout'
 import { useUpdateWorkout } from '@/lib/hooks/useWorkouts'
+import { getPersonalRecords } from '@/lib/utils/stats'
 import { SetInputGroup } from '@/components/workout/SetInput'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
+import { RestTimer } from '@/components/workout/RestTimer'
 
 const typeColors: Record<string, string> = {
   'Upper Body': 'bg-accent-cyan/20 text-accent-cyan',
@@ -88,21 +90,114 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   const isReadOnly = !!(currentExercise?.done)
   const totalExercises = exercises.length
 
+  // Personal Records
+  const personalRecords = useMemo(() => getPersonalRecords(workouts), [workouts])
+
+  const prInfo = useMemo(() => {
+    if (!currentExercise) return null
+    const record = personalRecords.get(currentExercise.exercise)
+    if (!record) return null
+    // Check if current load matches or exceeds PR
+    const currentLoad = currentExercise.load
+    if (!currentLoad) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
+    const match = currentLoad.match(/[\d.]+/)
+    if (!match) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
+    const currentNum = parseFloat(match[0])
+    if (isNaN(currentNum)) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
+    const isNewPR = currentNum > record.maxLoadNum
+    const isPR = currentNum >= record.maxLoadNum
+    return { isPR, isNewPR, maxLoad: record.maxLoad }
+  }, [currentExercise, personalRecords])
+
+  // Progressive Overload
+  const overloadInfo = useMemo(() => {
+    if (!currentExercise) return null
+    const prevWeekExercises = workouts.filter(
+      w => w.week === currentExercise.week - 1 &&
+           w.exercise === currentExercise.exercise &&
+           w.lastSaved
+    )
+    if (prevWeekExercises.length === 0) return null
+    const prevVolume = prevWeekExercises.reduce((sum, w) => {
+      return sum + [w.set1, w.set2, w.set3, w.set4, w.set5]
+        .filter((s): s is number => s !== undefined && s !== null)
+        .reduce((a, b) => a + b, 0)
+    }, 0)
+    if (prevVolume === 0) return null
+
+    const currentVolume = [
+      currentExercise.set1, currentExercise.set2, currentExercise.set3,
+      currentExercise.set4, currentExercise.set5,
+    ].filter((s): s is number => s !== undefined && s !== null)
+      .reduce((a, b) => a + b, 0)
+    if (currentVolume === 0) return null
+
+    const change = Math.round(((currentVolume - prevVolume) / prevVolume) * 100)
+    if (change > 0) return { direction: 'up' as const, pct: change }
+    if (change < 0) return { direction: 'down' as const, pct: Math.abs(change) }
+    return { direction: 'same' as const, pct: 0 }
+  }, [currentExercise, workouts])
+
+  // Rest Timer state
+  const [showTimer, setShowTimer] = useState(false)
+  const [timerKey, setTimerKey] = useState(0)
+
+  // Pre-fill from previous week state
+  const [prefilledFrom, setPrefilledFrom] = useState<number | null>(null)
+
   // Sync performance data when current exercise changes
   useEffect(() => {
     if (currentExercise) {
-      setPerformanceData({
-        set1: currentExercise.set1,
-        set2: currentExercise.set2,
-        set3: currentExercise.set3,
-        set4: currentExercise.set4,
-        set5: currentExercise.set5,
-        load: currentExercise.load || '',
-        avgRir: currentExercise.avgRir,
-        done: currentExercise.done,
-        notes: currentExercise.notes || '',
-      })
-      setHasChanges(false)
+      const hasPerformance = currentExercise.set1 !== undefined ||
+        currentExercise.set2 !== undefined ||
+        currentExercise.set3 !== undefined ||
+        currentExercise.load ||
+        currentExercise.done
+
+      if (hasPerformance) {
+        setPerformanceData({
+          set1: currentExercise.set1,
+          set2: currentExercise.set2,
+          set3: currentExercise.set3,
+          set4: currentExercise.set4,
+          set5: currentExercise.set5,
+          load: currentExercise.load || '',
+          avgRir: currentExercise.avgRir,
+          done: currentExercise.done,
+          notes: currentExercise.notes || '',
+        })
+        setHasChanges(false)
+        setPrefilledFrom(null)
+      } else {
+        // Try to pre-fill from previous week
+        const prevWeek = workouts.find(
+          w => w.week === currentExercise.week - 1 &&
+               w.exercise === currentExercise.exercise &&
+               w.lastSaved
+        )
+        if (prevWeek && (prevWeek.set1 !== undefined || prevWeek.load)) {
+          setPerformanceData({
+            set1: prevWeek.set1,
+            set2: prevWeek.set2,
+            set3: prevWeek.set3,
+            set4: prevWeek.set4,
+            set5: prevWeek.set5,
+            load: prevWeek.load || '',
+            avgRir: prevWeek.avgRir,
+            done: false,
+            notes: '',
+          })
+          setHasChanges(true)
+          setPrefilledFrom(prevWeek.week)
+        } else {
+          setPerformanceData({
+            set1: undefined, set2: undefined, set3: undefined, set4: undefined, set5: undefined,
+            load: '', avgRir: undefined, done: false, notes: '',
+          })
+          setHasChanges(false)
+          setPrefilledFrom(null)
+        }
+      }
     }
   }, [currentExercise?.id])
 
@@ -133,6 +228,12 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
     const result = await updateWorkout(currentExercise.id, performanceData)
     if (result) {
       setHasChanges(false)
+      setPrefilledFrom(null)
+      // Start rest timer if exercise has a rest period
+      if (currentExercise.rest) {
+        setTimerKey(prev => prev + 1)
+        setShowTimer(true)
+      }
       // Auto-advance to the next exercise in the same day before refetching
       const nextIndex = currentIndex + 1
       if (nextIndex < totalExercises) {
@@ -240,10 +341,35 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
           <div className="glass-card p-4">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h2 className="text-xl font-bold text-text-primary">{currentExercise.exercise}</h2>
-                <p className="text-sm text-text-secondary mt-1">
-                  Week {currentExercise.week} · Day {currentExercise.day} · {currentExercise.section}{currentExercise.muscleGroup ? ` · ${currentExercise.muscleGroup}` : ''}
-                </p>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-text-primary">{currentExercise.exercise}</h2>
+                  {prInfo?.isNewPR && (
+                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.4)]">
+                      New PR!
+                    </span>
+                  )}
+                  {prInfo?.isPR && !prInfo.isNewPR && (
+                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400">
+                      PR
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-sm text-text-secondary">
+                    Week {currentExercise.week} · Day {currentExercise.day} · {currentExercise.section}{currentExercise.muscleGroup ? ` · ${currentExercise.muscleGroup}` : ''}
+                  </p>
+                  {overloadInfo && (
+                    <span className={`text-xs font-medium ${
+                      overloadInfo.direction === 'up' ? 'text-accent-green' :
+                      overloadInfo.direction === 'down' ? 'text-accent-pink' :
+                      'text-text-tertiary'
+                    }`}>
+                      {overloadInfo.direction === 'up' && `↑ ${overloadInfo.pct}%`}
+                      {overloadInfo.direction === 'down' && `↓ ${overloadInfo.pct}%`}
+                      {overloadInfo.direction === 'same' && '→'}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex flex-col items-end gap-2">
                 <span className={`px-3 py-1 rounded text-sm font-medium ${typeColors[currentExercise.type] || 'bg-glass-bg text-text-secondary'}`}>
@@ -287,11 +413,28 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
             </div>
           </div>
 
+          {/* Rest Timer */}
+          {showTimer && currentExercise.rest && (
+            <RestTimer
+              key={timerKey}
+              restString={currentExercise.rest}
+              onComplete={() => {
+                setTimeout(() => setShowTimer(false), 3000)
+              }}
+              onSkip={() => setShowTimer(false)}
+            />
+          )}
+
           {/* Performance Card */}
           <div className="glass-card p-4">
             <h3 className="text-lg font-semibold text-text-primary mb-4">
               Track Performance
             </h3>
+            {prefilledFrom !== null && (
+              <p className="text-xs text-text-tertiary mb-3">
+                Pre-filled from Week {prefilledFrom}
+              </p>
+            )}
 
             <div className="space-y-4">
               <SetInputGroup

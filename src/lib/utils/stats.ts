@@ -1,4 +1,5 @@
 import { Workout } from '@/types/workout'
+import { normalizeMuscle } from '@/lib/utils/muscles'
 
 export function parseReps(reps: string): number {
   if (reps.includes('-')) {
@@ -195,6 +196,47 @@ export function groupVolumeByType(workouts: Workout[]): { data: VolumeByTypeWeek
     })
 
   return { data, types }
+}
+
+export interface MuscleVolumeData {
+  muscle: string
+  volume: number
+}
+
+export function groupVolumeByMuscle(workouts: Workout[]): MuscleVolumeData[] {
+  const volumes = new Map<string, number>()
+
+  workouts.forEach(w => {
+    if (!w.muscleGroup || !w.lastSaved) return
+    const key = normalizeMuscle(w.muscleGroup)
+    const vol = [w.set1, w.set2, w.set3, w.set4, w.set5]
+      .filter((s): s is number => s !== undefined && s !== null)
+      .reduce((a, b) => a + b, 0)
+    volumes.set(key, (volumes.get(key) || 0) + vol)
+  })
+
+  return Array.from(volumes.entries())
+    .map(([muscle, volume]) => ({ muscle, volume }))
+    .sort((a, b) => b.volume - a.volume)
+}
+
+export function getPersonalRecords(workouts: Workout[]): Map<string, { maxLoad: string; maxLoadNum: number }> {
+  const records = new Map<string, { maxLoad: string; maxLoadNum: number }>()
+
+  workouts.forEach(w => {
+    if (!w.lastSaved || !w.load) return
+    const numMatch = w.load.match(/[\d.]+/)
+    if (!numMatch) return
+    const loadNum = parseFloat(numMatch[0])
+    if (isNaN(loadNum) || loadNum === 0) return
+
+    const existing = records.get(w.exercise)
+    if (!existing || loadNum > existing.maxLoadNum) {
+      records.set(w.exercise, { maxLoad: w.load, maxLoadNum: loadNum })
+    }
+  })
+
+  return records
 }
 
 export function calculateCompletionRate(workouts: Workout[]): number {

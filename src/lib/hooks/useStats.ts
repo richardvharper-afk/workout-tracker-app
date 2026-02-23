@@ -9,6 +9,7 @@ import {
   groupVolumeByWeek,
   groupVolumeByType,
   groupByExercise,
+  groupVolumeByMuscle,
   calculateCompletionRate,
 } from '@/lib/utils/stats'
 
@@ -22,6 +23,7 @@ export function useStats(workouts: Workout[]) {
     const volumeByWeek = groupVolumeByWeek(workouts)
     const exerciseProgress = groupByExercise(workouts)
     const volumeByType = groupVolumeByType(workouts)
+    const muscleBalance = groupVolumeByMuscle(workouts)
 
     return {
       totalCompleted,
@@ -31,6 +33,7 @@ export function useStats(workouts: Workout[]) {
       daysCompletedRate,
       volumeByWeek,
       volumeByType,
+      muscleBalance,
       exerciseProgress,
       totalWorkouts: workouts.length,
     }
