@@ -161,7 +161,7 @@ export class GoogleSheetsClient {
         s => s.properties?.title === GOOGLE_SHEETS_CONFIG.sheetName
       )
 
-      if (!sheet?.properties?.sheetId) {
+      if (!sheet || sheet.properties?.sheetId == null) {
         throw new Error('Sheet not found')
       }
 
