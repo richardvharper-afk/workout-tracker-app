@@ -230,15 +230,17 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
     if (result) {
       setHasChanges(false)
       setPrefilledFrom(null)
-      // Only auto-advance and start rest timer when marked as completed
       if (performanceData.done) {
-        if (currentExercise.rest) {
-          setTimerKey(prev => prev + 1)
-          setShowTimer(true)
-        }
+        // Exercise complete — advance to next, no timer needed
         const nextIndex = currentIndex + 1
         if (nextIndex < totalExercises) {
           setCurrentIndex(nextIndex)
+        }
+      } else {
+        // Between sets — start rest timer, stay on exercise
+        if (currentExercise.rest) {
+          setTimerKey(prev => prev + 1)
+          setShowTimer(true)
         }
       }
       refetch()
