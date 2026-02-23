@@ -40,10 +40,11 @@ export function DailyVolumeChart({ workouts }: DailyVolumeChartProps) {
           w => w.week === week && w.day === day && w.lastSaved
         )
         const volume = dayWorkouts.reduce((sum, w) => {
-          const reps = w.reps.includes('-')
-            ? Math.round((parseInt(w.reps.split('-')[0]) + parseInt(w.reps.split('-')[1])) / 2)
-            : parseInt(w.reps) || 0
-          return sum + w.sets * reps
+          // Use actual performed reps from set1-set5
+          const actualReps = [w.set1, w.set2, w.set3, w.set4, w.set5]
+            .filter((s): s is number => s != null)
+            .reduce((a, b) => a + b, 0)
+          return sum + actualReps
         }, 0)
         if (volume > 0) {
           entry[`day${day}`] = volume
