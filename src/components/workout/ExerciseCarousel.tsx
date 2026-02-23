@@ -230,15 +230,16 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
     if (result) {
       setHasChanges(false)
       setPrefilledFrom(null)
-      // Start rest timer if exercise has a rest period
-      if (currentExercise.rest) {
-        setTimerKey(prev => prev + 1)
-        setShowTimer(true)
-      }
-      // Auto-advance to the next exercise in the same day before refetching
-      const nextIndex = currentIndex + 1
-      if (nextIndex < totalExercises) {
-        setCurrentIndex(nextIndex)
+      // Only auto-advance and start rest timer when marked as completed
+      if (performanceData.done) {
+        if (currentExercise.rest) {
+          setTimerKey(prev => prev + 1)
+          setShowTimer(true)
+        }
+        const nextIndex = currentIndex + 1
+        if (nextIndex < totalExercises) {
+          setCurrentIndex(nextIndex)
+        }
       }
       refetch()
     }
