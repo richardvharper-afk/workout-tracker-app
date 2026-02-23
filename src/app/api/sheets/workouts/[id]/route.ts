@@ -146,15 +146,28 @@ export async function DELETE(
 
     const service = new WorkoutsService(client)
 
+    // Verify workout exists before deleting
+    const existing = await service.getWorkout(id)
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: 'Workout not found' },
+        { status: 404 }
+      )
+    }
+
+    console.log(`Deleting workout id=${id}, exercise="${existing.exercise}", week=${existing.week}, day=${existing.day}`)
+
     // Delete workout
     await service.deleteWorkout(id)
+
+    console.log(`Delete completed for workout id=${id}`)
 
     return NextResponse.json({
       success: true,
       message: 'Workout deleted successfully',
     })
   } catch (error: any) {
-    console.error('Error deleting workout:', error)
+    console.error('Error deleting workout:', error?.message, error?.stack)
 
     // Handle not found errors
     if (error.message === 'Workout not found') {
