@@ -7,6 +7,7 @@ import { DayDetailModal } from './DayDetailModal'
 
 interface CalendarProps {
   workouts: Workout[]
+  onRefetch?: () => void
 }
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -23,7 +24,7 @@ function formatMonth(year: number, month: number): string {
   return new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 }
 
-export function Calendar({ workouts }: CalendarProps) {
+export function Calendar({ workouts, onRefetch }: CalendarProps) {
   const today = new Date()
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
@@ -218,6 +219,7 @@ export function Calendar({ workouts }: CalendarProps) {
         onClose={() => setSelectedDay(null)}
         date={selectedDateStr}
         workouts={selectedWorkouts}
+        onRefetch={onRefetch}
       />
     </div>
   )

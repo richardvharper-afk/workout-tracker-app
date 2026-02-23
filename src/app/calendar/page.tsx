@@ -9,7 +9,7 @@ import { useWorkouts } from '@/lib/hooks/useWorkouts'
 import { FullPageSpinner } from '@/components/ui/Spinner'
 
 export default function CalendarPage() {
-  const { workouts, loading, error } = useWorkouts()
+  const { workouts, loading, error, refetch } = useWorkouts()
 
   if (loading) {
     return <FullPageSpinner />
@@ -25,7 +25,7 @@ export default function CalendarPage() {
             <p className="text-text-tertiary text-sm">Login to view your calendar</p>
           </div>
         ) : (
-          <Calendar workouts={workouts} />
+          <Calendar workouts={workouts} onRefetch={refetch} />
         )}
       </Container>
       <Navigation />
