@@ -27,17 +27,11 @@ interface DayDetailModalProps {
   onRefetch?: () => void
 }
 
-function buildPerformanceData(w: Workout): WorkoutPerformanceData {
+function buildEmptyPerformanceData(): WorkoutPerformanceData {
   return {
-    set1: w.set1,
-    set2: w.set2,
-    set3: w.set3,
-    set4: w.set4,
-    set5: w.set5,
-    load: w.load || '',
-    avgRir: w.avgRir,
-    done: w.done,
-    notes: w.notes || '',
+    done: false,
+    notes: '',
+    load: '',
   }
 }
 
@@ -73,7 +67,7 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, onRefetch }: D
 
   const handleSelectExercise = (workout: Workout) => {
     setSelectedExercise(workout)
-    setPerformanceData(buildPerformanceData(workout))
+    setPerformanceData(buildEmptyPerformanceData())
   }
 
   const handleBackToList = () => {
@@ -277,6 +271,28 @@ function EditView({
   deleteLoading,
 }: EditViewProps) {
   const colorClass = typeColors[workout.type] || 'bg-glass-bg text-text-tertiary'
+  const hasPrevious = workout.lastSaved != null
+
+  // Build placeholder strings from previous session data
+  const setPlaceholders = hasPrevious ? {
+    set1: workout.set1 != null ? `Prev: ${workout.set1}` : undefined,
+    set2: workout.set2 != null ? `Prev: ${workout.set2}` : undefined,
+    set3: workout.set3 != null ? `Prev: ${workout.set3}` : undefined,
+    set4: workout.set4 != null ? `Prev: ${workout.set4}` : undefined,
+    set5: workout.set5 != null ? `Prev: ${workout.set5}` : undefined,
+  } : undefined
+
+  const loadPlaceholder = hasPrevious && workout.load
+    ? `Prev: ${workout.load}`
+    : 'e.g. 30kg, Bodyweight'
+
+  const avgRirPlaceholder = hasPrevious && workout.avgRir != null
+    ? `Prev: ${workout.avgRir}`
+    : '0-10'
+
+  const notesPlaceholder = hasPrevious && workout.notes
+    ? `Prev: ${workout.notes}`
+    : 'Session notes...'
 
   return (
     <div className="space-y-4">
@@ -337,6 +353,7 @@ function EditView({
             set5: performanceData.set5,
           }}
           onChange={onSetChange}
+          placeholders={setPlaceholders}
         />
 
         <Input
@@ -345,7 +362,7 @@ function EditView({
           onChange={e =>
             setPerformanceData(prev => ({ ...prev, load: e.target.value }))
           }
-          placeholder="e.g. 30kg, Bodyweight"
+          placeholder={loadPlaceholder}
         />
 
         <Input
@@ -362,7 +379,7 @@ function EditView({
               avgRir: val === '' ? undefined : parseInt(val, 10),
             }))
           }}
-          placeholder="0-10"
+          placeholder={avgRirPlaceholder}
         />
 
         <Input
@@ -371,7 +388,7 @@ function EditView({
           onChange={e =>
             setPerformanceData(prev => ({ ...prev, notes: e.target.value }))
           }
-          placeholder="Session notes..."
+          placeholder={notesPlaceholder}
         />
 
         <Checkbox

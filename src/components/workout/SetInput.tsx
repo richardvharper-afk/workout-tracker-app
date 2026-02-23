@@ -6,9 +6,10 @@ interface SetInputProps {
   value?: number
   onChange: (value: number | undefined) => void
   disabled?: boolean
+  placeholder?: string
 }
 
-export function SetInput({ setNumber, value, onChange, disabled }: SetInputProps) {
+export function SetInput({ setNumber, value, onChange, disabled, placeholder }: SetInputProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     if (val === '') {
@@ -34,7 +35,7 @@ export function SetInput({ setNumber, value, onChange, disabled }: SetInputProps
         value={value ?? ''}
         onChange={handleChange}
         disabled={disabled}
-        placeholder="Reps"
+        placeholder={placeholder || "Reps"}
         className="text-center"
       />
     </div>
@@ -52,9 +53,16 @@ interface SetInputGroupProps {
   }
   onChange: (setNumber: number, value: number | undefined) => void
   disabled?: boolean
+  placeholders?: {
+    set1?: string
+    set2?: string
+    set3?: string
+    set4?: string
+    set5?: string
+  }
 }
 
-export function SetInputGroup({ sets, values, onChange, disabled }: SetInputGroupProps) {
+export function SetInputGroup({ sets, values, onChange, disabled, placeholders }: SetInputGroupProps) {
   const setNumbers = Array.from({ length: Math.min(sets, 5) }, (_, i) => i + 1)
 
   const getSetValue = (setNum: number): number | undefined => {
@@ -74,6 +82,18 @@ export function SetInputGroup({ sets, values, onChange, disabled }: SetInputGrou
     }
   }
 
+  const getPlaceholder = (setNum: number): string | undefined => {
+    if (!placeholders) return undefined
+    switch (setNum) {
+      case 1: return placeholders.set1
+      case 2: return placeholders.set2
+      case 3: return placeholders.set3
+      case 4: return placeholders.set4
+      case 5: return placeholders.set5
+      default: return undefined
+    }
+  }
+
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-medium text-text-primary">Actual Performance</h3>
@@ -84,6 +104,7 @@ export function SetInputGroup({ sets, values, onChange, disabled }: SetInputGrou
           value={getSetValue(setNum)}
           onChange={(value) => onChange(setNum, value)}
           disabled={disabled}
+          placeholder={getPlaceholder(setNum)}
         />
       ))}
     </div>
