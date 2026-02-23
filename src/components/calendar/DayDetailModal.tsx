@@ -273,13 +273,14 @@ function EditView({
   const colorClass = typeColors[workout.type] || 'bg-glass-bg text-text-tertiary'
   const hasPrevious = workout.lastSaved != null
 
-  // Collect previous session values for reference display
-  const prevSets = hasPrevious
-    ? [workout.set1, workout.set2, workout.set3, workout.set4, workout.set5]
-        .slice(0, workout.sets)
-        .filter((s): s is number => s != null)
-    : []
-  const hasPrevData = prevSets.length > 0 || (hasPrevious && (workout.load || workout.avgRir != null))
+  // Previous set values to show as reference labels
+  const previousSetValues = hasPrevious ? {
+    set1: workout.set1,
+    set2: workout.set2,
+    set3: workout.set3,
+    set4: workout.set4,
+    set5: workout.set5,
+  } : undefined
 
   return (
     <div className="space-y-4">
@@ -328,20 +329,6 @@ function EditView({
         </div>
       </div>
 
-      {/* Previous session reference */}
-      {hasPrevData && (
-        <div className="rounded-lg border border-dashed border-accent-amber/30 bg-accent-amber/5 px-3 py-2">
-          <p className="text-xs font-medium text-accent-amber mb-1.5">Previous Session</p>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-tertiary">
-            {prevSets.map((reps, i) => (
-              <span key={i}>S{i + 1}: {reps}</span>
-            ))}
-            {workout.load && <span>Load: {workout.load}</span>}
-            {workout.avgRir != null && <span>RIR: {workout.avgRir}</span>}
-          </div>
-        </div>
-      )}
-
       {/* Performance form */}
       <div className="border-t border-glass-border pt-4 space-y-4">
         <SetInputGroup
@@ -354,6 +341,7 @@ function EditView({
             set5: performanceData.set5,
           }}
           onChange={onSetChange}
+          previousValues={previousSetValues}
         />
 
         <Input

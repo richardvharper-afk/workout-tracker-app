@@ -7,9 +7,10 @@ interface SetInputProps {
   onChange: (value: number | undefined) => void
   disabled?: boolean
   placeholder?: string
+  previousValue?: number
 }
 
-export function SetInput({ setNumber, value, onChange, disabled, placeholder }: SetInputProps) {
+export function SetInput({ setNumber, value, onChange, disabled, placeholder, previousValue }: SetInputProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     if (val === '') {
@@ -38,6 +39,11 @@ export function SetInput({ setNumber, value, onChange, disabled, placeholder }: 
         placeholder={placeholder || "Reps"}
         className="text-center"
       />
+      {previousValue != null && (
+        <span className="text-xs text-accent-amber whitespace-nowrap">
+          prev: {previousValue}
+        </span>
+      )}
     </div>
   )
 }
@@ -53,16 +59,16 @@ interface SetInputGroupProps {
   }
   onChange: (setNumber: number, value: number | undefined) => void
   disabled?: boolean
-  placeholders?: {
-    set1?: string
-    set2?: string
-    set3?: string
-    set4?: string
-    set5?: string
+  previousValues?: {
+    set1?: number
+    set2?: number
+    set3?: number
+    set4?: number
+    set5?: number
   }
 }
 
-export function SetInputGroup({ sets, values, onChange, disabled, placeholders }: SetInputGroupProps) {
+export function SetInputGroup({ sets, values, onChange, disabled, previousValues }: SetInputGroupProps) {
   const setNumbers = Array.from({ length: Math.min(sets, 5) }, (_, i) => i + 1)
 
   const getSetValue = (setNum: number): number | undefined => {
@@ -82,14 +88,14 @@ export function SetInputGroup({ sets, values, onChange, disabled, placeholders }
     }
   }
 
-  const getPlaceholder = (setNum: number): string | undefined => {
-    if (!placeholders) return undefined
+  const getPreviousValue = (setNum: number): number | undefined => {
+    if (!previousValues) return undefined
     switch (setNum) {
-      case 1: return placeholders.set1
-      case 2: return placeholders.set2
-      case 3: return placeholders.set3
-      case 4: return placeholders.set4
-      case 5: return placeholders.set5
+      case 1: return previousValues.set1
+      case 2: return previousValues.set2
+      case 3: return previousValues.set3
+      case 4: return previousValues.set4
+      case 5: return previousValues.set5
       default: return undefined
     }
   }
@@ -104,7 +110,7 @@ export function SetInputGroup({ sets, values, onChange, disabled, placeholders }
           value={getSetValue(setNum)}
           onChange={(value) => onChange(setNum, value)}
           disabled={disabled}
-          placeholder={getPlaceholder(setNum)}
+          previousValue={getPreviousValue(setNum)}
         />
       ))}
     </div>
