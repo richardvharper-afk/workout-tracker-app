@@ -31,7 +31,7 @@ export function SetInput({ setNumber, value, onChange, disabled }: SetInputProps
         inputMode="numeric"
         min="0"
         max="100"
-        value={value || ''}
+        value={value ?? ''}
         onChange={handleChange}
         disabled={disabled}
         placeholder="Reps"
