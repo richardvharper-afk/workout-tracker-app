@@ -49,17 +49,24 @@ export default function WorkoutDetailPage() {
 
   React.useEffect(() => {
     if (workout) {
-      setPerformanceData({
-        set1: workout.set1,
-        set2: workout.set2,
-        set3: workout.set3,
-        set4: workout.set4,
-        set5: workout.set5,
-        load: workout.load || '',
-        avgRir: workout.avgRir,
-        done: workout.done,
-        notes: workout.notes || '',
-      })
+      if (workout.lastSaved) {
+        setPerformanceData({
+          set1: workout.set1,
+          set2: workout.set2,
+          set3: workout.set3,
+          set4: workout.set4,
+          set5: workout.set5,
+          load: workout.load || '',
+          avgRir: workout.avgRir,
+          done: workout.done,
+          notes: workout.notes || '',
+        })
+      } else {
+        setPerformanceData({
+          set1: undefined, set2: undefined, set3: undefined, set4: undefined, set5: undefined,
+          load: '', avgRir: undefined, done: false, notes: '',
+        })
+      }
     }
   }, [workout])
 

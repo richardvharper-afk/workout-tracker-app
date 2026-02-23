@@ -142,7 +142,10 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   const [showTimer, setShowTimer] = useState(false)
   const [timerKey, setTimerKey] = useState(0)
 
-  // Pre-fill from previous week state
+  // Previous week data for reference labels
+  const [previousWeekValues, setPreviousWeekValues] = useState<{
+    set1?: number; set2?: number; set3?: number; set4?: number; set5?: number;
+  } | undefined>(undefined)
   const [prefilledFrom, setPrefilledFrom] = useState<number | null>(null)
 
   // Sync performance data when current exercise changes
@@ -168,35 +171,33 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
         })
         setHasChanges(false)
         setPrefilledFrom(null)
+        setPreviousWeekValues(undefined)
       } else {
-        // Try to pre-fill from previous week
+        // Look up previous week data for reference
         const prevWeek = workouts.find(
           w => w.week === currentExercise.week - 1 &&
                w.exercise === currentExercise.exercise &&
                w.lastSaved
         )
         if (prevWeek && (prevWeek.set1 !== undefined || prevWeek.load)) {
-          setPerformanceData({
+          // Show previous values as reference labels, but keep form empty
+          setPreviousWeekValues({
             set1: prevWeek.set1,
             set2: prevWeek.set2,
             set3: prevWeek.set3,
             set4: prevWeek.set4,
             set5: prevWeek.set5,
-            load: prevWeek.load || '',
-            avgRir: prevWeek.avgRir,
-            done: false,
-            notes: '',
           })
-          setHasChanges(true)
           setPrefilledFrom(prevWeek.week)
         } else {
-          setPerformanceData({
-            set1: undefined, set2: undefined, set3: undefined, set4: undefined, set5: undefined,
-            load: '', avgRir: undefined, done: false, notes: '',
-          })
-          setHasChanges(false)
+          setPreviousWeekValues(undefined)
           setPrefilledFrom(null)
         }
+        setPerformanceData({
+          set1: undefined, set2: undefined, set3: undefined, set4: undefined, set5: undefined,
+          load: '', avgRir: undefined, done: false, notes: '',
+        })
+        setHasChanges(false)
       }
     }
   }, [currentExercise?.id])
@@ -431,8 +432,8 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
               Track Performance
             </h3>
             {prefilledFrom !== null && (
-              <p className="text-xs text-text-tertiary mb-3">
-                Pre-filled from Week {prefilledFrom}
+              <p className="text-xs text-accent-amber mb-3">
+                Showing previous reps from Week {prefilledFrom}
               </p>
             )}
 
@@ -442,6 +443,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
                 values={performanceData}
                 onChange={handleSetChange}
                 disabled={isReadOnly}
+                previousValues={previousWeekValues}
               />
 
               <Input
