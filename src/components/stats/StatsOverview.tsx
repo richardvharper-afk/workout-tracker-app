@@ -10,6 +10,7 @@ import { StreakCalendar } from './StreakCalendar'
 import { VolumeByTypeChart } from './VolumeByTypeChart'
 import { MuscleHeatmap } from './MuscleHeatmap'
 import { MuscleBalanceChart } from './MuscleBalanceChart'
+import { DailyVolumeChart } from './DailyVolumeChart'
 
 interface StatsOverviewProps {
   workouts: Workout[]
@@ -50,6 +51,9 @@ export function StatsOverview({ workouts: allWorkouts }: StatsOverviewProps) {
 
       {/* Volume chart */}
       <VolumeChart data={stats.volumeByWeek} />
+
+      {/* Daily volume by week */}
+      <DailyVolumeChart workouts={workouts} />
 
       {/* Volume by type */}
       <VolumeByTypeChart
