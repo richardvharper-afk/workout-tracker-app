@@ -41,7 +41,7 @@ export function SetInput({ setNumber, value, onChange, disabled, placeholder, pr
       />
       {previousValue != null && (
         <span className="text-xs text-accent-amber whitespace-nowrap">
-          prev: {previousValue}
+          {previousValue}
         </span>
       )}
     </div>
