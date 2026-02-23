@@ -273,26 +273,13 @@ function EditView({
   const colorClass = typeColors[workout.type] || 'bg-glass-bg text-text-tertiary'
   const hasPrevious = workout.lastSaved != null
 
-  // Build placeholder strings from previous session data
-  const setPlaceholders = hasPrevious ? {
-    set1: workout.set1 != null ? `Prev: ${workout.set1}` : undefined,
-    set2: workout.set2 != null ? `Prev: ${workout.set2}` : undefined,
-    set3: workout.set3 != null ? `Prev: ${workout.set3}` : undefined,
-    set4: workout.set4 != null ? `Prev: ${workout.set4}` : undefined,
-    set5: workout.set5 != null ? `Prev: ${workout.set5}` : undefined,
-  } : undefined
-
-  const loadPlaceholder = hasPrevious && workout.load
-    ? `Prev: ${workout.load}`
-    : 'e.g. 30kg, Bodyweight'
-
-  const avgRirPlaceholder = hasPrevious && workout.avgRir != null
-    ? `Prev: ${workout.avgRir}`
-    : '0-10'
-
-  const notesPlaceholder = hasPrevious && workout.notes
-    ? `Prev: ${workout.notes}`
-    : 'Session notes...'
+  // Collect previous session values for reference display
+  const prevSets = hasPrevious
+    ? [workout.set1, workout.set2, workout.set3, workout.set4, workout.set5]
+        .slice(0, workout.sets)
+        .filter((s): s is number => s != null)
+    : []
+  const hasPrevData = prevSets.length > 0 || (hasPrevious && (workout.load || workout.avgRir != null))
 
   return (
     <div className="space-y-4">
@@ -341,6 +328,20 @@ function EditView({
         </div>
       </div>
 
+      {/* Previous session reference */}
+      {hasPrevData && (
+        <div className="rounded-lg border border-dashed border-accent-amber/30 bg-accent-amber/5 px-3 py-2">
+          <p className="text-xs font-medium text-accent-amber mb-1.5">Previous Session</p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-tertiary">
+            {prevSets.map((reps, i) => (
+              <span key={i}>S{i + 1}: {reps}</span>
+            ))}
+            {workout.load && <span>Load: {workout.load}</span>}
+            {workout.avgRir != null && <span>RIR: {workout.avgRir}</span>}
+          </div>
+        </div>
+      )}
+
       {/* Performance form */}
       <div className="border-t border-glass-border pt-4 space-y-4">
         <SetInputGroup
@@ -353,7 +354,6 @@ function EditView({
             set5: performanceData.set5,
           }}
           onChange={onSetChange}
-          placeholders={setPlaceholders}
         />
 
         <Input
@@ -362,7 +362,7 @@ function EditView({
           onChange={e =>
             setPerformanceData(prev => ({ ...prev, load: e.target.value }))
           }
-          placeholder={loadPlaceholder}
+          placeholder="e.g. 30kg, Bodyweight"
         />
 
         <Input
@@ -379,7 +379,7 @@ function EditView({
               avgRir: val === '' ? undefined : parseInt(val, 10),
             }))
           }}
-          placeholder={avgRirPlaceholder}
+          placeholder="0-10"
         />
 
         <Input
@@ -388,7 +388,7 @@ function EditView({
           onChange={e =>
             setPerformanceData(prev => ({ ...prev, notes: e.target.value }))
           }
-          placeholder={notesPlaceholder}
+          placeholder="Session notes..."
         />
 
         <Checkbox
