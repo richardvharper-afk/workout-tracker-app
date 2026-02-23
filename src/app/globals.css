@@ -95,6 +95,8 @@ html {
 
   .input::placeholder {
     color: #6a6a7f;
+    font-style: italic;
+    opacity: 0.7;
   }
 
   .input:focus {
