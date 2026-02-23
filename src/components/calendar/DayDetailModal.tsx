@@ -109,7 +109,7 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, onRefetch }: D
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title={selectedExercise ? 'Edit Exercise' : date} size={modalSize}>
+      <Modal isOpen={isOpen} onClose={selectedExercise ? handleBackToList : onClose} title={selectedExercise ? 'Edit Exercise' : date} size={modalSize}>
         <div className="space-y-4">
           {selectedExercise ? (
             // ---- Edit View ----
