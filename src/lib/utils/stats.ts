@@ -209,10 +209,7 @@ export function groupVolumeByMuscle(workouts: Workout[]): MuscleVolumeData[] {
   workouts.forEach(w => {
     if (!w.muscleGroup || !w.lastSaved) return
     const key = normalizeMuscle(w.muscleGroup)
-    const vol = [w.set1, w.set2, w.set3, w.set4, w.set5]
-      .filter((s): s is number => s !== undefined && s !== null)
-      .reduce((a, b) => a + b, 0)
-    volumes.set(key, (volumes.get(key) || 0) + vol)
+    volumes.set(key, (volumes.get(key) || 0) + w.sets)
   })
 
   return Array.from(volumes.entries())
