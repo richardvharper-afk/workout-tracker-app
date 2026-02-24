@@ -142,15 +142,17 @@ const MUSCLE_PATHS: Record<string, { paths: string[]; label: string; labelPos: [
 }
 
 export function MuscleHeatmap({ workouts }: MuscleHeatmapProps) {
-  const muscleVolumes = useMemo(() => {
+  const { muscleVolumes, weekCount } = useMemo(() => {
     const volumes = new Map<string, number>()
+    const weeks = new Set<number>()
     workouts.forEach(w => {
       if (!w.muscleGroup || !w.lastSaved) return
       const key = normalizeMuscle(w.muscleGroup)
       const vol = getSets(w)
       volumes.set(key, (volumes.get(key) || 0) + vol)
+      weeks.add(w.week)
     })
-    return volumes
+    return { muscleVolumes: volumes, weekCount: weeks.size }
   }, [workouts])
 
   const maxMuscleVolume = useMemo(() => {
@@ -223,7 +225,9 @@ export function MuscleHeatmap({ workouts }: MuscleHeatmapProps) {
                   style={{ backgroundColor: getHeatColor(ratio) }}
                 />
                 <span className="text-[11px] text-text-secondary truncate capitalize">{muscle}</span>
-                <span className="text-[10px] text-text-tertiary ml-auto shrink-0">{volume} sets</span>
+                <span className="text-[10px] text-text-tertiary ml-auto shrink-0">
+                  {volume} sets · {weekCount > 0 ? Math.round(volume / weekCount) : 0}/wk
+                </span>
               </div>
             )
           })}
