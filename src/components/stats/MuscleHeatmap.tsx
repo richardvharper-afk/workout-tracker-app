@@ -8,10 +8,8 @@ interface MuscleHeatmapProps {
   workouts: Workout[]
 }
 
-function getVolume(w: Workout): number {
-  return [w.set1, w.set2, w.set3, w.set4, w.set5]
-    .filter((s): s is number => s !== undefined && s !== null)
-    .reduce((a, b) => a + b, 0)
+function getSets(w: Workout): number {
+  return w.sets
 }
 
 // Color interpolation from dim to bright green based on intensity ratio
@@ -149,7 +147,7 @@ export function MuscleHeatmap({ workouts }: MuscleHeatmapProps) {
     workouts.forEach(w => {
       if (!w.muscleGroup || !w.lastSaved) return
       const key = normalizeMuscle(w.muscleGroup)
-      const vol = getVolume(w)
+      const vol = getSets(w)
       volumes.set(key, (volumes.get(key) || 0) + vol)
     })
     return volumes
@@ -225,7 +223,7 @@ export function MuscleHeatmap({ workouts }: MuscleHeatmapProps) {
                   style={{ backgroundColor: getHeatColor(ratio) }}
                 />
                 <span className="text-[11px] text-text-secondary truncate capitalize">{muscle}</span>
-                <span className="text-[10px] text-text-tertiary ml-auto shrink-0">{volume}</span>
+                <span className="text-[10px] text-text-tertiary ml-auto shrink-0">{volume} sets</span>
               </div>
             )
           })}
