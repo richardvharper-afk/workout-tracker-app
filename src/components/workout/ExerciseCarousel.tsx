@@ -195,7 +195,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
         }
         setPerformanceData({
           set1: undefined, set2: undefined, set3: undefined, set4: undefined, set5: undefined,
-          load: '', avgRir: undefined, done: false, notes: '',
+          load: '', avgRir: undefined, done: false, notes: currentExercise.notes || '',
         })
         setHasChanges(false)
       }
