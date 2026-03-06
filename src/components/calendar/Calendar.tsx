@@ -219,6 +219,7 @@ export function Calendar({ workouts, onRefetch }: CalendarProps) {
         onClose={() => setSelectedDay(null)}
         date={selectedDateStr}
         workouts={selectedWorkouts}
+        allWorkouts={workouts}
         onRefetch={onRefetch}
       />
     </div>

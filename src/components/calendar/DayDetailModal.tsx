@@ -34,6 +34,7 @@ interface DayDetailModalProps {
   onClose: () => void
   date: string
   workouts: Workout[]
+  allWorkouts?: Workout[]
   onRefetch?: () => void
 }
 
@@ -45,7 +46,7 @@ function buildEmptyPerformanceData(): WorkoutPerformanceData {
   }
 }
 
-export function DayDetailModal({ isOpen, onClose, date, workouts, onRefetch }: DayDetailModalProps) {
+export function DayDetailModal({ isOpen, onClose, date, workouts, allWorkouts, onRefetch }: DayDetailModalProps) {
   const [selectedExercise, setSelectedExercise] = useState<Workout | null>(null)
   const [performanceData, setPerformanceData] = useState<WorkoutPerformanceData>({
     done: false,
@@ -82,6 +83,11 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, onRefetch }: D
   const handleSelectExercise = (workout: Workout) => {
     setSelectedExercise(workout)
     setPerformanceData(buildEmptyPerformanceData())
+    // Look up video URL by exercise name across all workouts
+    const source = allWorkouts ?? workouts
+    const match = source.find(w => w.exercise === workout.exercise && w.videoUrl)
+    setVideoUrl(match?.videoUrl || workout.videoUrl || '')
+    setVideoUrlError('')
     setVideoUrl(workout.videoUrl || '')
     setVideoUrlError('')
   }
