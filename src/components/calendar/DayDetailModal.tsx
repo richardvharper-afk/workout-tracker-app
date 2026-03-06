@@ -88,8 +88,6 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, allWorkouts, o
     const match = source.find(w => w.exercise === workout.exercise && w.videoUrl)
     setVideoUrl(match?.videoUrl || workout.videoUrl || '')
     setVideoUrlError('')
-    setVideoUrl(workout.videoUrl || '')
-    setVideoUrlError('')
   }
 
   const handleBackToList = () => {
