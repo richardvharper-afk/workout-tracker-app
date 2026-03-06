@@ -9,6 +9,16 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { Button } from '@/components/ui/Button'
 import { useUpdateWorkout, useDeleteWorkout } from '@/lib/hooks/useWorkouts'
 
+function isValidUrl(url: string): boolean {
+  if (!url) return true
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 const typeColors: Record<string, string> = {
   'Upper Body': 'bg-accent-cyan/20 text-accent-cyan',
   'Lower Body': 'bg-accent-purple/20 text-accent-purple',
@@ -40,6 +50,8 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, onRefetch }: D
   const [performanceData, setPerformanceData] = useState<WorkoutPerformanceData>({
     done: false,
   })
+  const [videoUrl, setVideoUrl] = useState('')
+  const [videoUrlError, setVideoUrlError] = useState('')
   const [showSaveConfirm, setShowSaveConfirm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
@@ -62,16 +74,22 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, onRefetch }: D
   useEffect(() => {
     if (!isOpen) {
       setSelectedExercise(null)
+      setVideoUrl('')
+      setVideoUrlError('')
     }
   }, [isOpen])
 
   const handleSelectExercise = (workout: Workout) => {
     setSelectedExercise(workout)
     setPerformanceData(buildEmptyPerformanceData())
+    setVideoUrl(workout.videoUrl || '')
+    setVideoUrlError('')
   }
 
   const handleBackToList = () => {
     setSelectedExercise(null)
+    setVideoUrl('')
+    setVideoUrlError('')
   }
 
   const handleSetChange = (setNumber: number, value: number | undefined) => {
@@ -81,7 +99,10 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, onRefetch }: D
 
   const handleSave = async () => {
     if (!selectedExercise) return
-    const result = await updateWorkout(selectedExercise.id, performanceData)
+    const result = await updateWorkout(selectedExercise.id, {
+      ...performanceData,
+      videoUrl: videoUrl || undefined
+    })
     setShowSaveConfirm(false)
     if (result) {
       onRefetch?.()
@@ -111,9 +132,19 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, onRefetch }: D
               workout={selectedExercise}
               performanceData={performanceData}
               setPerformanceData={setPerformanceData}
+              videoUrl={videoUrl}
+              setVideoUrl={setVideoUrl}
+              videoUrlError={videoUrlError}
+              setVideoUrlError={setVideoUrlError}
               onBack={handleBackToList}
               onSetChange={handleSetChange}
-              onSave={() => setShowSaveConfirm(true)}
+              onSave={() => {
+                if (!isValidUrl(videoUrl)) {
+                  setVideoUrlError('Must be a valid URL starting with http:// or https://')
+                  return
+                }
+                setShowSaveConfirm(true)
+              }}
               onDelete={() => setShowDeleteConfirm(true)}
               saveLoading={saveLoading}
               deleteLoading={deleteLoading}
@@ -251,6 +282,10 @@ interface EditViewProps {
   workout: Workout
   performanceData: WorkoutPerformanceData
   setPerformanceData: React.Dispatch<React.SetStateAction<WorkoutPerformanceData>>
+  videoUrl: string
+  setVideoUrl: (v: string) => void
+  videoUrlError: string
+  setVideoUrlError: (v: string) => void
   onBack: () => void
   onSetChange: (setNumber: number, value: number | undefined) => void
   onSave: () => void
@@ -263,6 +298,10 @@ function EditView({
   workout,
   performanceData,
   setPerformanceData,
+  videoUrl,
+  setVideoUrl,
+  videoUrlError,
+  setVideoUrlError,
   onBack,
   onSetChange,
   onSave,
@@ -378,6 +417,38 @@ function EditView({
           }
           placeholder="Session notes..."
         />
+
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-sm font-medium text-text-secondary">Video Link</label>
+            {videoUrl && isValidUrl(videoUrl) && (
+              <a
+                href={videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-accent-cyan hover:underline"
+              >
+                Watch ↗
+              </a>
+            )}
+          </div>
+          <Input
+            value={videoUrl}
+            onChange={e => {
+              setVideoUrl(e.target.value)
+              setVideoUrlError('')
+            }}
+            onBlur={() => {
+              if (!isValidUrl(videoUrl)) {
+                setVideoUrlError('Must be a valid URL starting with http:// or https://')
+              }
+            }}
+            placeholder="https://..."
+          />
+          {videoUrlError && (
+            <p className="text-xs text-accent-pink mt-1">{videoUrlError}</p>
+          )}
+        </div>
 
         <Checkbox
           label="Mark as completed"
