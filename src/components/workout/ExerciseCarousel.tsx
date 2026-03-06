@@ -347,6 +347,23 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-bold text-text-primary">{currentExercise.exercise}</h2>
+                  {(() => {
+                    const videoUrl = currentExercise.videoUrl ||
+                      workouts.find(w => w.exercise === currentExercise.exercise && w.videoUrl)?.videoUrl
+                    return videoUrl ? (
+                      <a
+                        href={videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-text-tertiary hover:text-accent-cyan transition-colors"
+                        title="Watch video"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </a>
+                    ) : null
+                  })()}
                   {prInfo?.isNewPR && (
                     <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.4)]">
                       New PR!
