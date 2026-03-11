@@ -137,7 +137,18 @@ export function groupByExercise(workouts: Workout[], bodyweightKg?: number): Exe
 
     const volume = calculateWorkoutVolume(w, bodyweightKg)
     const peakRep = Math.max(...sets)
-    const targetVolume = w.sets * parseMaxReps(w.reps || '')
+    const targetReps = w.sets * parseMaxReps(w.reps || '')
+    const loadNum = w.load ? parseFloat(w.load.match(/[\d.]+/)?.[0] ?? '') : NaN
+    let targetVolume: number
+    if (w.isBodyweight) {
+      const bw = bodyweightKg ?? 0
+      const added = isNaN(loadNum) ? 0 : loadNum
+      targetVolume = targetReps * (bw + added)
+    } else if (!isNaN(loadNum)) {
+      targetVolume = targetReps * loadNum
+    } else {
+      targetVolume = targetReps
+    }
 
     if (!exerciseMap.has(w.exercise)) {
       exerciseMap.set(w.exercise, new Map())

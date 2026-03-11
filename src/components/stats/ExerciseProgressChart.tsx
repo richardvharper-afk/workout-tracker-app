@@ -68,11 +68,22 @@ export function ExerciseProgressChart({ data }: ExerciseProgressChartProps) {
                 axisLine={false}
               />
               <YAxis
+                yAxisId="left"
                 stroke="#6a6a7f"
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
                 width={40}
+              />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                stroke="#00ff94"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                width={30}
+                label={{ value: 'reps', angle: 90, position: 'insideRight', fill: '#00ff94', fontSize: 10, dx: 10 }}
               />
               <Tooltip
                 contentStyle={{
@@ -88,6 +99,7 @@ export function ExerciseProgressChart({ data }: ExerciseProgressChartProps) {
                 wrapperStyle={{ fontSize: 11, color: '#9a9ab0' }}
               />
               <Line
+                yAxisId="left"
                 type="monotone"
                 dataKey="volume"
                 stroke="#00d4ff"
@@ -96,6 +108,7 @@ export function ExerciseProgressChart({ data }: ExerciseProgressChartProps) {
                 name="Total Volume"
               />
               <Line
+                yAxisId="left"
                 type="monotone"
                 dataKey="targetVolume"
                 stroke="#ff6b9d"
@@ -105,6 +118,7 @@ export function ExerciseProgressChart({ data }: ExerciseProgressChartProps) {
                 name="Target Volume"
               />
               <Line
+                yAxisId="right"
                 type="monotone"
                 dataKey="peakRep"
                 stroke="#00ff94"
