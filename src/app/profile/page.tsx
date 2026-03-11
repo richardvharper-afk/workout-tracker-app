@@ -1,17 +1,65 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Navigation } from '@/components/layout/Navigation'
 import { Container } from '@/components/layout/Container'
 import { LogoutButton } from '@/components/auth/LogoutButton'
 import { Card } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
+
+const BODYWEIGHT_KEY = 'userBodyweightKg'
 
 export default function ProfilePage() {
+  const [bodyweight, setBodyweight] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    const stored = localStorage.getItem(BODYWEIGHT_KEY)
+    if (stored) setBodyweight(stored)
+  }, [])
+
+  const handleSave = () => {
+    const val = parseFloat(bodyweight)
+    if (isNaN(val) || val <= 0) return
+    localStorage.setItem(BODYWEIGHT_KEY, String(val))
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
   return (
     <div className="min-h-[100dvh] flex flex-col pb-20">
       <Header title="Profile" />
       <Container className="flex-1 py-4 space-y-4">
+
+        {/* Body Settings */}
+        <Card padding="lg">
+          <h2 className="text-lg font-bold text-text-primary mb-4">Body Settings</h2>
+          <div className="space-y-3">
+            <Input
+              label="Body Weight (kg)"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              value={bodyweight}
+              onChange={e => {
+                setBodyweight(e.target.value)
+                setSaved(false)
+              }}
+              placeholder="e.g. 82"
+            />
+            <Button
+              variant="primary"
+              onClick={handleSave}
+              disabled={!bodyweight || isNaN(parseFloat(bodyweight))}
+            >
+              {saved ? 'Saved ✓' : 'Save'}
+            </Button>
+          </div>
+        </Card>
+
+        {/* App Info */}
         <Card padding="lg">
           <h2 className="text-xl font-bold text-text-primary mb-2">
             Workout Tracker
