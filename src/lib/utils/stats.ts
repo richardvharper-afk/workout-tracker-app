@@ -126,7 +126,7 @@ export interface ExerciseProgressData {
   weeks: { week: number; volume: number; peakRep: number; targetVolume: number }[]
 }
 
-export function groupByExercise(workouts: Workout[]): ExerciseProgressData[] {
+export function groupByExercise(workouts: Workout[], bodyweightKg?: number): ExerciseProgressData[] {
   const exerciseMap = new Map<string, Map<number, { volume: number; peakRep: number; targetVolume: number }>>()
 
   workouts.forEach(w => {
@@ -135,7 +135,7 @@ export function groupByExercise(workouts: Workout[]): ExerciseProgressData[] {
       .filter((s): s is number => s !== undefined && s !== null)
     if (sets.length === 0) return
 
-    const volume = sets.reduce((a, b) => a + b, 0)
+    const volume = calculateWorkoutVolume(w, bodyweightKg)
     const peakRep = Math.max(...sets)
     const targetVolume = w.sets * parseMaxReps(w.reps || '')
 
@@ -169,15 +169,13 @@ export interface VolumeByTypeWeek {
   [type: string]: number // dynamic keys for each workout type
 }
 
-export function groupVolumeByType(workouts: Workout[]): { data: VolumeByTypeWeek[]; types: string[] } {
+export function groupVolumeByType(workouts: Workout[], bodyweightKg?: number): { data: VolumeByTypeWeek[]; types: string[] } {
   const savedWorkouts = workouts.filter(w => w.lastSaved)
   const typeSet = new Set<string>()
   const weekMap = new Map<number, Map<string, number>>()
 
   savedWorkouts.forEach(w => {
-    const vol = [w.set1, w.set2, w.set3, w.set4, w.set5]
-      .filter((s): s is number => s !== undefined && s !== null)
-      .reduce((a, b) => a + b, 0)
+    const vol = calculateWorkoutVolume(w, bodyweightKg)
     if (vol === 0) return
 
     typeSet.add(w.type)

@@ -22,8 +22,8 @@ export function useStats(workouts: Workout[]) {
     const completionRate = calculateCompletionRate(workouts)
     const daysCompletedRate = calculateDaysCompletedRate(workouts)
     const volumeByWeek = groupVolumeByWeek(workouts, bodyweightKg)
-    const exerciseProgress = groupByExercise(workouts)
-    const volumeByType = groupVolumeByType(workouts)
+    const exerciseProgress = groupByExercise(workouts, bodyweightKg)
+    const volumeByType = groupVolumeByType(workouts, bodyweightKg)
     const muscleBalance = groupVolumeByMuscle(workouts)
 
     return {
