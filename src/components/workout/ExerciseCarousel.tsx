@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Workout, WorkoutPerformanceData } from '@/types/workout'
 import { useUpdateWorkout } from '@/lib/hooks/useWorkouts'
-import { getPersonalRecords } from '@/lib/utils/stats'
+import { getPersonalRecords, calculateWorkoutVolume } from '@/lib/utils/stats'
 import { SetInputGroup } from '@/components/workout/SetInput'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -112,6 +112,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   // Progressive Overload
   const overloadInfo = useMemo(() => {
     if (!currentExercise) return null
+    const bodyweightKg = parseFloat(localStorage.getItem('userBodyweightKg') || '') || undefined
     const prevWeekExercises = workouts.filter(
       w => w.week === currentExercise.week - 1 &&
            w.exercise === currentExercise.exercise &&
@@ -119,17 +120,11 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
     )
     if (prevWeekExercises.length === 0) return null
     const prevVolume = prevWeekExercises.reduce((sum, w) => {
-      return sum + [w.set1, w.set2, w.set3, w.set4, w.set5]
-        .filter((s): s is number => s !== undefined && s !== null)
-        .reduce((a, b) => a + b, 0)
+      return sum + calculateWorkoutVolume(w, bodyweightKg)
     }, 0)
     if (prevVolume === 0) return null
 
-    const currentVolume = [
-      currentExercise.set1, currentExercise.set2, currentExercise.set3,
-      currentExercise.set4, currentExercise.set5,
-    ].filter((s): s is number => s !== undefined && s !== null)
-      .reduce((a, b) => a + b, 0)
+    const currentVolume = calculateWorkoutVolume(currentExercise, bodyweightKg)
     if (currentVolume === 0) return null
 
     const change = Math.round(((currentVolume - prevVolume) / prevVolume) * 100)

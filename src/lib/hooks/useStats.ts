@@ -15,12 +15,13 @@ import {
 
 export function useStats(workouts: Workout[]) {
   const stats = useMemo(() => {
+    const bodyweightKg = parseFloat(localStorage.getItem('userBodyweightKg') || '') || undefined
     const totalCompleted = workouts.filter(w => w.done).length
     const streak = calculateStreak(workouts)
     const volumeChange = calculateVolumeChange(workouts)
     const completionRate = calculateCompletionRate(workouts)
     const daysCompletedRate = calculateDaysCompletedRate(workouts)
-    const volumeByWeek = groupVolumeByWeek(workouts)
+    const volumeByWeek = groupVolumeByWeek(workouts, bodyweightKg)
     const exerciseProgress = groupByExercise(workouts)
     const volumeByType = groupVolumeByType(workouts)
     const muscleBalance = groupVolumeByMuscle(workouts)

@@ -101,7 +101,7 @@ export interface WeeklyVolumeData {
   volume: number
 }
 
-export function groupVolumeByWeek(workouts: Workout[]): WeeklyVolumeData[] {
+export function groupVolumeByWeek(workouts: Workout[], bodyweightKg?: number): WeeklyVolumeData[] {
   const weekMap = new Map<number, { sets: number; reps: number; volume: number }>()
 
   workouts.forEach(w => {
@@ -112,7 +112,7 @@ export function groupVolumeByWeek(workouts: Workout[]): WeeklyVolumeData[] {
     const totalReps = actualSets.reduce((a, b) => a + b, 0)
     existing.sets += actualSets.length
     existing.reps += totalReps
-    existing.volume += totalReps
+    existing.volume += calculateWorkoutVolume(w, bodyweightKg)
     weekMap.set(w.week, existing)
   })
 
@@ -240,4 +240,25 @@ export function calculateCompletionRate(workouts: Workout[]): number {
   if (workouts.length === 0) return 0
   const completed = workouts.filter(w => w.done).length
   return Math.round((completed / workouts.length) * 100)
+}
+
+export function calculateWorkoutVolume(w: Workout, bodyweightKg?: number): number {
+  const totalReps = [w.set1, w.set2, w.set3, w.set4, w.set5]
+    .filter((s): s is number => s != null)
+    .reduce((a, b) => a + b, 0)
+  if (totalReps === 0) return 0
+
+  const loadNum = w.load ? parseFloat(w.load.match(/[\d.]+/)?.[0] ?? '') : NaN
+
+  if (w.isBodyweight) {
+    const bw = bodyweightKg ?? 0
+    const added = isNaN(loadNum) ? 0 : loadNum
+    return totalReps * (bw + added)
+  }
+
+  if (!isNaN(loadNum)) {
+    return totalReps * loadNum
+  }
+
+  return totalReps // fallback
 }

@@ -62,6 +62,7 @@ export const SHEET_COLUMNS = {
   VIDEO_URL: 21,
   ROW_INDEX: 22,
   MUSCLE_GROUP: 23,
+  IS_BODYWEIGHT: 24,
 } as const
 
-export const TOTAL_COLUMNS = 24
+export const TOTAL_COLUMNS = 25

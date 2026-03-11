@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { Workout } from '@/types/workout'
+import { calculateWorkoutVolume } from '@/lib/utils/stats'
 
 const LineChart = dynamic(() => import('recharts').then(m => m.LineChart), { ssr: false })
 const Line = dynamic(() => import('recharts').then(m => m.Line), { ssr: false })
@@ -28,6 +29,7 @@ interface DailyVolumeChartProps {
 
 export function DailyVolumeChart({ workouts }: DailyVolumeChartProps) {
   const { chartData, days } = useMemo(() => {
+    const bodyweightKg = parseFloat(localStorage.getItem('userBodyweightKg') || '') || undefined
     // Get all unique weeks and days, sorted
     const weeks = [...new Set(workouts.map(w => w.week))].sort((a, b) => a - b)
     const days = [...new Set(workouts.map(w => w.day))].sort((a, b) => a - b)
@@ -40,11 +42,7 @@ export function DailyVolumeChart({ workouts }: DailyVolumeChartProps) {
           w => w.week === week && w.day === day && w.lastSaved
         )
         const volume = dayWorkouts.reduce((sum, w) => {
-          // Use actual performed reps from set1-set5
-          const actualReps = [w.set1, w.set2, w.set3, w.set4, w.set5]
-            .filter((s): s is number => s != null)
-            .reduce((a, b) => a + b, 0)
-          return sum + actualReps
+          return sum + calculateWorkoutVolume(w, bodyweightKg)
         }, 0)
         if (volume > 0) {
           entry[`day${day}`] = volume

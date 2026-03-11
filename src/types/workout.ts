@@ -28,6 +28,7 @@ export interface Workout {
   videoUrl?: string // Column 21
   rowIndex?: string // Column 22 (position index)
   muscleGroup?: string // Column 23 (priority muscle group)
+  isBodyweight?: boolean // Column 24
 }
 
 export type WorkoutType =
