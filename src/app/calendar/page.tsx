@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
 import { Header } from '@/components/layout/Header'
 import { Navigation } from '@/components/layout/Navigation'
 import { Container } from '@/components/layout/Container'
@@ -28,6 +29,15 @@ export default function CalendarPage() {
           <Calendar workouts={workouts} onRefetch={refetch} />
         )}
       </Container>
+      <Link
+        href="/workouts/new"
+        className="fixed bottom-24 right-5 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-accent-cyan to-accent-purple shadow-glow-cyan active:scale-95 transition-transform"
+        style={{ marginBottom: 'var(--safe-area-inset-bottom)' }}
+      >
+        <svg className="w-7 h-7 text-dark-base" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" stroke="currentColor">
+          <path d="M12 4v16m8-8H4" />
+        </svg>
+      </Link>
       <Navigation />
     </div>
   )

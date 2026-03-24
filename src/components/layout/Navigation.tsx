@@ -7,16 +7,7 @@ import { usePathname } from 'next/navigation'
 export function Navigation() {
   const pathname = usePathname()
 
-  const leftItems = [
-    {
-      href: '/workouts',
-      label: 'Workouts',
-      icon: (
-        <svg className="w-6 h-6" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        </svg>
-      ),
-    },
+  const navItems = [
     {
       href: '/calendar',
       label: 'Calendar',
@@ -26,9 +17,6 @@ export function Navigation() {
         </svg>
       ),
     },
-  ]
-
-  const rightItems = [
     {
       href: '/videos',
       label: 'Videos',
@@ -36,6 +24,15 @@ export function Navigation() {
         <svg className="w-6 h-6" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
           <circle cx="12" cy="12" r="10" />
           <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none" />
+        </svg>
+      ),
+    },
+    {
+      href: '/workouts',
+      label: 'Workouts',
+      icon: (
+        <svg className="w-6 h-6" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
       ),
     },
@@ -64,35 +61,8 @@ export function Navigation() {
         WebkitTransform: 'translateZ(0)',
       }}
     >
-      <div className="flex items-center justify-around h-16 relative">
-        {/* Left items */}
-        {leftItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] px-3 py-2 rounded-lg transition-colors ${
-              isActive(item.href)
-                ? 'text-accent-cyan drop-shadow-[0_0_8px_rgba(0,212,255,0.5)]'
-                : 'text-text-tertiary hover:text-text-secondary'
-            }`}
-          >
-            {item.icon}
-            <span className="text-xs mt-1 font-medium">{item.label}</span>
-          </Link>
-        ))}
-
-        {/* Center FAB */}
-        <Link
-          href="/workouts/new"
-          className="flex items-center justify-center w-14 h-14 -mt-7 rounded-full bg-gradient-to-br from-accent-cyan to-accent-purple shadow-glow-cyan active:scale-95 transition-transform"
-        >
-          <svg className="w-7 h-7 text-dark-base" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" stroke="currentColor">
-            <path d="M12 4v16m8-8H4" />
-          </svg>
-        </Link>
-
-        {/* Right items */}
-        {rightItems.map((item) => (
+      <div className="flex items-center justify-around h-16">
+        {navItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
