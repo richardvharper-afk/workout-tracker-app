@@ -104,6 +104,10 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
 
     let currentNum: number
     if (currentExercise.isBodyweight) {
+      // Only show PR badge once sets have been recorded — prevents false badge on unsaved exercises
+      const hasSetData = [currentExercise.set1, currentExercise.set2, currentExercise.set3, currentExercise.set4, currentExercise.set5]
+        .some(s => s != null)
+      if (!hasSetData) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
       const bw = bodyweightKg ?? 0
       const addedMatch = currentExercise.load?.match(/[\d.]+/)
       const added = addedMatch ? parseFloat(addedMatch[0]) : 0
