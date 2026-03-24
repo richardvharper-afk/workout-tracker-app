@@ -90,24 +90,37 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   const isReadOnly = !!(currentExercise?.done)
   const totalExercises = exercises.length
 
-  // Personal Records
-  const personalRecords = useMemo(() => getPersonalRecords(workouts), [workouts])
+  // Personal Records — exclude current week so we compare against history only
+  const bodyweightKg = parseFloat(localStorage.getItem('userBodyweightKg') || '') || undefined
+  const personalRecords = useMemo(
+    () => getPersonalRecords(workouts.filter(w => w.week !== currentWeek), bodyweightKg),
+    [workouts, currentWeek, bodyweightKg]
+  )
 
   const prInfo = useMemo(() => {
     if (!currentExercise) return null
     const record = personalRecords.get(currentExercise.exercise)
     if (!record) return null
-    // Check if current load matches or exceeds PR
-    const currentLoad = currentExercise.load
-    if (!currentLoad) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
-    const match = currentLoad.match(/[\d.]+/)
-    if (!match) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
-    const currentNum = parseFloat(match[0])
-    if (isNaN(currentNum)) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
+
+    let currentNum: number
+    if (currentExercise.isBodyweight) {
+      const bw = bodyweightKg ?? 0
+      const addedMatch = currentExercise.load?.match(/[\d.]+/)
+      const added = addedMatch ? parseFloat(addedMatch[0]) : 0
+      currentNum = bw + (isNaN(added) ? 0 : added)
+      if (currentNum === 0) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
+    } else {
+      if (!currentExercise.load) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
+      const match = currentExercise.load.match(/[\d.]+/)
+      if (!match) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
+      currentNum = parseFloat(match[0])
+      if (isNaN(currentNum)) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
+    }
+
     const isNewPR = currentNum > record.maxLoadNum
     const isPR = currentNum >= record.maxLoadNum
     return { isPR, isNewPR, maxLoad: record.maxLoad }
-  }, [currentExercise, personalRecords])
+  }, [currentExercise, personalRecords, bodyweightKg])
 
   // Progressive Overload
   const overloadInfo = useMemo(() => {

@@ -226,19 +226,34 @@ export function groupVolumeByMuscle(workouts: Workout[]): MuscleVolumeData[] {
     .sort((a, b) => b.volume - a.volume)
 }
 
-export function getPersonalRecords(workouts: Workout[]): Map<string, { maxLoad: string; maxLoadNum: number }> {
+export function getPersonalRecords(workouts: Workout[], bodyweightKg?: number): Map<string, { maxLoad: string; maxLoadNum: number }> {
   const records = new Map<string, { maxLoad: string; maxLoadNum: number }>()
 
   workouts.forEach(w => {
-    if (!w.lastSaved || !w.load) return
-    const numMatch = w.load.match(/[\d.]+/)
-    if (!numMatch) return
-    const loadNum = parseFloat(numMatch[0])
-    if (isNaN(loadNum) || loadNum === 0) return
+    if (!w.lastSaved) return
+
+    let effectiveLoad: number
+    let displayLoad: string
+
+    if (w.isBodyweight) {
+      const bw = bodyweightKg ?? 0
+      const addedMatch = w.load?.match(/[\d.]+/)
+      const added = addedMatch ? parseFloat(addedMatch[0]) : 0
+      effectiveLoad = bw + (isNaN(added) ? 0 : added)
+      displayLoad = added > 0 ? `BW+${added}` : 'BW'
+      if (effectiveLoad === 0) return
+    } else {
+      if (!w.load) return
+      const numMatch = w.load.match(/[\d.]+/)
+      if (!numMatch) return
+      effectiveLoad = parseFloat(numMatch[0])
+      if (isNaN(effectiveLoad) || effectiveLoad === 0) return
+      displayLoad = w.load
+    }
 
     const existing = records.get(w.exercise)
-    if (!existing || loadNum > existing.maxLoadNum) {
-      records.set(w.exercise, { maxLoad: w.load, maxLoadNum: loadNum })
+    if (!existing || effectiveLoad > existing.maxLoadNum) {
+      records.set(w.exercise, { maxLoad: displayLoad, maxLoadNum: effectiveLoad })
     }
   })
 
