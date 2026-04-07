@@ -16,6 +16,43 @@ export function parseMaxReps(reps: string): number {
   return Math.max(...numbers.map(Number))
 }
 
+/**
+ * Parse load string to extract numeric weight value.
+ * Handles various formats: "135", "135 lbs", "20kg", "BW+10", etc.
+ * Returns null if no valid number found.
+ */
+export function parseLoad(loadString: string | undefined): number | null {
+  if (!loadString || loadString.trim() === '') return null
+
+  // Remove common units and clean the string
+  const cleaned = loadString.toLowerCase()
+    .replace(/\s*lbs?\s*/g, ' ')
+    .replace(/\s*kgs?\s*/g, ' ')
+    .replace(/\s*pounds?\s*/g, ' ')
+    .replace(/bw\+?/g, '')
+    .trim()
+
+  // Extract all numbers (including decimals)
+  const numberMatch = cleaned.match(/\d+\.?\d*/)
+  if (!numberMatch) {
+    // Log warning in development
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`[parseLoad] Unable to parse load string: "${loadString}"`)
+    }
+    return null
+  }
+
+  const parsed = parseFloat(numberMatch[0])
+  if (isNaN(parsed) || parsed < 0) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`[parseLoad] Invalid number in load string: "${loadString}" -> ${parsed}`)
+    }
+    return null
+  }
+
+  return parsed
+}
+
 export function calculateStreak(workouts: Workout[]): number {
   // Group workouts by week-day, check consecutive days with completed exercises
   const dayKeys = new Map<string, boolean>()
@@ -138,13 +175,13 @@ export function groupByExercise(workouts: Workout[], bodyweightKg?: number): Exe
     const volume = calculateWorkoutVolume(w, bodyweightKg)
     const peakRep = Math.max(...sets)
     const targetReps = w.sets * parseMaxReps(w.reps || '')
-    const loadNum = w.load ? parseFloat(w.load.match(/[\d.]+/)?.[0] ?? '') : NaN
+    const loadNum = parseLoad(w.load)
     let targetVolume: number
     if (w.isBodyweight) {
       const bw = bodyweightKg ?? 0
-      const added = isNaN(loadNum) ? 0 : loadNum
+      const added = loadNum ?? 0
       targetVolume = targetReps * (bw + added)
-    } else if (!isNaN(loadNum)) {
+    } else if (loadNum !== null) {
       targetVolume = targetReps * loadNum
     } else {
       targetVolume = targetReps
@@ -226,8 +263,8 @@ export function groupVolumeByMuscle(workouts: Workout[]): MuscleVolumeData[] {
     .sort((a, b) => b.volume - a.volume)
 }
 
-export function getPersonalRecords(workouts: Workout[], bodyweightKg?: number): Map<string, { maxLoad: string; maxLoadNum: number }> {
-  const records = new Map<string, { maxLoad: string; maxLoadNum: number }>()
+export function getPersonalRecords(workouts: Workout[], bodyweightKg?: number): Map<string, { maxLoad: string; maxLoadNum: number; week: number; day: number }> {
+  const records = new Map<string, { maxLoad: string; maxLoadNum: number; week: number; day: number }>()
 
   workouts.forEach(w => {
     if (!w.lastSaved) return
@@ -237,23 +274,20 @@ export function getPersonalRecords(workouts: Workout[], bodyweightKg?: number): 
 
     if (w.isBodyweight) {
       const bw = bodyweightKg ?? 0
-      const addedMatch = w.load?.match(/[\d.]+/)
-      const added = addedMatch ? parseFloat(addedMatch[0]) : 0
-      effectiveLoad = bw + (isNaN(added) ? 0 : added)
+      const added = parseLoad(w.load) ?? 0
+      effectiveLoad = bw + added
       displayLoad = added > 0 ? `BW+${added}` : 'BW'
       if (effectiveLoad === 0) return
     } else {
-      if (!w.load) return
-      const numMatch = w.load.match(/[\d.]+/)
-      if (!numMatch) return
-      effectiveLoad = parseFloat(numMatch[0])
-      if (isNaN(effectiveLoad) || effectiveLoad === 0) return
-      displayLoad = w.load
+      const parsed = parseLoad(w.load)
+      if (parsed === null || parsed === 0) return
+      effectiveLoad = parsed
+      displayLoad = w.load || `${parsed}`
     }
 
     const existing = records.get(w.exercise)
     if (!existing || effectiveLoad > existing.maxLoadNum) {
-      records.set(w.exercise, { maxLoad: displayLoad, maxLoadNum: effectiveLoad })
+      records.set(w.exercise, { maxLoad: displayLoad, maxLoadNum: effectiveLoad, week: w.week, day: w.day })
     }
   })
 
@@ -272,15 +306,15 @@ export function calculateWorkoutVolume(w: Workout, bodyweightKg?: number): numbe
     .reduce((a, b) => a + b, 0)
   if (totalReps === 0) return 0
 
-  const loadNum = w.load ? parseFloat(w.load.match(/[\d.]+/)?.[0] ?? '') : NaN
+  const loadNum = parseLoad(w.load)
 
   if (w.isBodyweight) {
     const bw = bodyweightKg ?? 0
-    const added = isNaN(loadNum) ? 0 : loadNum
+    const added = loadNum ?? 0
     return totalReps * (bw + added)
   }
 
-  if (!isNaN(loadNum)) {
+  if (loadNum !== null) {
     return totalReps * loadNum
   }
 

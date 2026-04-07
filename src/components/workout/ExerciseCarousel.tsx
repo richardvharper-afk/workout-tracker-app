@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Workout, WorkoutPerformanceData } from '@/types/workout'
 import { useUpdateWorkout } from '@/lib/hooks/useWorkouts'
-import { getPersonalRecords, calculateWorkoutVolume } from '@/lib/utils/stats'
+import { getPersonalRecords, calculateWorkoutVolume, parseLoad } from '@/lib/utils/stats'
 import { SetInputGroup } from '@/components/workout/SetInput'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -90,11 +90,14 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   const isReadOnly = !!(currentExercise?.done)
   const totalExercises = exercises.length
 
-  // Personal Records — exclude current week so we compare against history only
+  // Personal Records — exclude current exercise only (not entire week)
   const bodyweightKg = parseFloat(localStorage.getItem('userBodyweightKg') || '') || undefined
   const personalRecords = useMemo(
-    () => getPersonalRecords(workouts.filter(w => w.week !== currentWeek), bodyweightKg),
-    [workouts, currentWeek, bodyweightKg]
+    () => getPersonalRecords(
+      workouts.filter(w => !(w.week === currentWeek && w.day === currentDay && w.exercise === currentExercise?.exercise)),
+      bodyweightKg
+    ),
+    [workouts, currentWeek, currentDay, currentExercise, bodyweightKg]
   )
 
   const prInfo = useMemo(() => {
@@ -107,23 +110,21 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
       // Only show PR badge once sets have been recorded — prevents false badge on unsaved exercises
       const hasSetData = [currentExercise.set1, currentExercise.set2, currentExercise.set3, currentExercise.set4, currentExercise.set5]
         .some(s => s != null)
-      if (!hasSetData) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
+      if (!hasSetData) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad, prWeek: record.week, prDay: record.day, improvement: null }
       const bw = bodyweightKg ?? 0
-      const addedMatch = currentExercise.load?.match(/[\d.]+/)
-      const added = addedMatch ? parseFloat(addedMatch[0]) : 0
-      currentNum = bw + (isNaN(added) ? 0 : added)
-      if (currentNum === 0) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
+      const added = parseLoad(currentExercise.load) ?? 0
+      currentNum = bw + added
+      if (currentNum === 0) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad, prWeek: record.week, prDay: record.day, improvement: null }
     } else {
-      if (!currentExercise.load) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
-      const match = currentExercise.load.match(/[\d.]+/)
-      if (!match) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
-      currentNum = parseFloat(match[0])
-      if (isNaN(currentNum)) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad }
+      const parsed = parseLoad(currentExercise.load)
+      if (parsed === null || parsed === 0) return { isPR: false, isNewPR: false, maxLoad: record.maxLoad, prWeek: record.week, prDay: record.day, improvement: null }
+      currentNum = parsed
     }
 
     const isNewPR = currentNum > record.maxLoadNum
     const isPR = currentNum >= record.maxLoadNum
-    return { isPR, isNewPR, maxLoad: record.maxLoad }
+    const improvement = isNewPR ? Math.round((currentNum - record.maxLoadNum) * 10) / 10 : null
+    return { isPR, isNewPR, maxLoad: record.maxLoad, prWeek: record.week, prDay: record.day, improvement }
   }, [currentExercise, personalRecords, bodyweightKg])
 
   // Progressive Overload
@@ -377,12 +378,18 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
                     ) : null
                   })()}
                   {prInfo?.isNewPR && (
-                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.4)]">
+                    <span
+                      className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.4)] cursor-help"
+                      title={`New PR! Previous: ${prInfo.maxLoad} (Week ${prInfo.prWeek}, Day ${prInfo.prDay})${prInfo.improvement ? ` • +${prInfo.improvement}` : ''}`}
+                    >
                       New PR!
                     </span>
                   )}
                   {prInfo?.isPR && !prInfo.isNewPR && (
-                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400">
+                    <span
+                      className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 cursor-help"
+                      title={`Tied PR: ${prInfo.maxLoad} (Week ${prInfo.prWeek}, Day ${prInfo.prDay})`}
+                    >
                       PR
                     </span>
                   )}

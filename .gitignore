@@ -33,4 +33,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
+# IDE / Editor
+.vs/
+.vscode/
+.idea/
+
+# Claude Code
+.claude/
+
+# Other projects (not part of this repo)
+New Workout Tracket/
