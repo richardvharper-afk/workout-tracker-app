@@ -8,6 +8,7 @@ import { LogoutButton } from '@/components/auth/LogoutButton'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import packageJson from '../../../package.json'
 
 const BODYWEIGHT_KEY = 'userBodyweightKg'
 
@@ -71,18 +72,36 @@ export default function ProfilePage() {
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-medium text-text-tertiary mb-2">Version</h3>
-              <p className="text-sm text-text-primary">0.1.0</p>
+              <p className="text-sm text-text-primary font-mono">v{packageJson.version}</p>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-text-tertiary mb-2">What's New in v0.2.0</h3>
+              <ul className="text-sm text-text-secondary space-y-1">
+                <li className="flex items-start gap-2">
+                  <span className="text-accent-green mt-0.5">✓</span>
+                  <span>Personal Record tooltips show previous PR details</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-accent-green mt-0.5">✓</span>
+                  <span>Fixed PR detection for same-week exercises</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-accent-green mt-0.5">✓</span>
+                  <span>Improved load parsing (supports decimals, units)</span>
+                </li>
+              </ul>
             </div>
 
             <div>
               <h3 className="text-sm font-medium text-text-tertiary mb-2">Features</h3>
               <ul className="text-sm text-text-secondary space-y-1 list-disc list-inside">
                 <li>View workouts from Google Sheets</li>
-                <li>Add new workouts</li>
-                <li>Edit workout performance</li>
-                <li>Track sets, reps, and load</li>
+                <li>Track sets, reps, load, and RIR</li>
+                <li>Personal Record tracking with tooltips</li>
+                <li>Progressive overload indicators</li>
                 <li>Calendar progress view</li>
-                <li>Stats and graphs</li>
+                <li>Stats and performance graphs</li>
               </ul>
             </div>
 
