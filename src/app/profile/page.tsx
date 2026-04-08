@@ -8,7 +8,7 @@ import { LogoutButton } from '@/components/auth/LogoutButton'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import packageJson from '../../../package.json'
+import { APP_VERSION, WHATS_NEW } from '@/constants/version'
 
 const BODYWEIGHT_KEY = 'userBodyweightKg'
 
@@ -72,24 +72,18 @@ export default function ProfilePage() {
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-medium text-text-tertiary mb-2">Version</h3>
-              <p className="text-sm text-text-primary font-mono">v{packageJson.version}</p>
+              <p className="text-sm text-text-primary font-mono">v{APP_VERSION}</p>
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-text-tertiary mb-2">What's New in v0.2.0</h3>
+              <h3 className="text-sm font-medium text-text-tertiary mb-2">What&apos;s New in v{APP_VERSION}</h3>
               <ul className="text-sm text-text-secondary space-y-1">
-                <li className="flex items-start gap-2">
-                  <span className="text-accent-green mt-0.5">✓</span>
-                  <span>Personal Record tooltips show previous PR details</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-accent-green mt-0.5">✓</span>
-                  <span>Fixed PR detection for same-week exercises</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-accent-green mt-0.5">✓</span>
-                  <span>Improved load parsing (supports decimals, units)</span>
-                </li>
+                {WHATS_NEW.map((item, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span className="text-accent-green mt-0.5">✓</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
               </ul>
             </div>
 
