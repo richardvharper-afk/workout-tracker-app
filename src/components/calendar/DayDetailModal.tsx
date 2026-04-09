@@ -325,16 +325,6 @@ function EditView({
   deleteLoading,
 }: EditViewProps) {
   const colorClass = typeColors[workout.type] || 'bg-glass-bg text-text-tertiary'
-  const hasPrevious = workout.lastSaved != null
-
-  // Previous set values to show as reference labels
-  const previousSetValues = hasPrevious ? {
-    set1: workout.set1,
-    set2: workout.set2,
-    set3: workout.set3,
-    set4: workout.set4,
-    set5: workout.set5,
-  } : undefined
 
   return (
     <div className="space-y-4">
@@ -395,7 +385,6 @@ function EditView({
             set5: performanceData.set5,
           }}
           onChange={onSetChange}
-          previousValues={previousSetValues}
         />
 
         <Input
