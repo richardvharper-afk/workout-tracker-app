@@ -82,7 +82,18 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, allWorkouts, o
 
   const handleSelectExercise = (workout: Workout) => {
     setSelectedExercise(workout)
-    setPerformanceData(buildEmptyPerformanceData())
+    // Populate with existing values if already saved
+    setPerformanceData({
+      done: workout.done || false,
+      notes: workout.notes || '',
+      load: workout.load || '',
+      avgRir: workout.avgRir,
+      set1: workout.set1,
+      set2: workout.set2,
+      set3: workout.set3,
+      set4: workout.set4,
+      set5: workout.set5,
+    })
     // Look up video URL by exercise name across all workouts
     const source = allWorkouts ?? workouts
     const match = source.find(w => w.exercise === workout.exercise && w.videoUrl)
