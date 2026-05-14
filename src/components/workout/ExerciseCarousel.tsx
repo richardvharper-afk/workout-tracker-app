@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { RestTimer } from '@/components/workout/RestTimer'
+import { Session, SessionFormData } from '@/types/session'
 
 const typeColors: Record<string, string> = {
   'Upper Body': 'bg-accent-cyan/20 text-accent-cyan',
@@ -57,6 +58,30 @@ interface ExerciseCarouselProps {
 
 export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   const { updateWorkout, loading: updating } = useUpdateWorkout()
+  const [bodyweightKg, setBodyweightKg] = useState<number | undefined>(undefined)
+
+  // Fetch latest bodyweight from API on mount
+  useEffect(() => {
+    const fetchBodyweight = async () => {
+      try {
+        const response = await fetch('/api/sheets/body-metrics/latest')
+        const data = await response.json()
+        if (data.success && data.data?.bodyweight) {
+          setBodyweightKg(data.data.bodyweight)
+        } else {
+          // Fallback to localStorage for backwards compatibility
+          const stored = localStorage.getItem('userBodyweightKg')
+          if (stored) setBodyweightKg(parseFloat(stored))
+        }
+      } catch (error) {
+        console.error('Failed to fetch bodyweight:', error)
+        // Fallback to localStorage
+        const stored = localStorage.getItem('userBodyweightKg')
+        if (stored) setBodyweightKg(parseFloat(stored))
+      }
+    }
+    fetchBodyweight()
+  }, [])
 
   // Compute available weeks and days
   const weeks = useMemo(() => {
@@ -70,9 +95,10 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   const [currentDay, setCurrentDay] = useState(defaultDay.day)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [hasChanges, setHasChanges] = useState(false)
+  const [notesExpanded, setNotesExpanded] = useState(false)
   const [performanceData, setPerformanceData] = useState<WorkoutPerformanceData>({
     set1: undefined, set2: undefined, set3: undefined, set4: undefined, set5: undefined,
-    load: '', avgRir: undefined, done: false, notes: '',
+    load: '', avgRir: undefined, done: false, ownNote: '',
   })
 
   // Days available for the selected week
@@ -91,7 +117,6 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   const totalExercises = exercises.length
 
   // Personal Records — exclude current exercise only (not entire week)
-  const bodyweightKg = parseFloat(localStorage.getItem('userBodyweightKg') || '') || undefined
   const personalRecords = useMemo(
     () => getPersonalRecords(
       workouts.filter(w => !(w.week === currentWeek && w.day === currentDay && w.exercise === currentExercise?.exercise)),
@@ -127,29 +152,46 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
     return { isPR, isNewPR, maxLoad: record.maxLoad, prWeek: record.week, prDay: record.day, improvement }
   }, [currentExercise, personalRecords, bodyweightKg])
 
-  // Progressive Overload
+  // Progressive Overload - compare to most recent instance of the exercise
   const overloadInfo = useMemo(() => {
     if (!currentExercise) return null
-    const bodyweightKg = parseFloat(localStorage.getItem('userBodyweightKg') || '') || undefined
-    const prevWeekExercises = workouts.filter(
-      w => w.week === currentExercise.week - 1 &&
-           w.exercise === currentExercise.exercise &&
-           w.lastSaved
-    )
-    if (prevWeekExercises.length === 0) return null
-    const prevVolume = prevWeekExercises.reduce((sum, w) => {
-      return sum + calculateWorkoutVolume(w, bodyweightKg)
-    }, 0)
-    if (prevVolume === 0) return null
 
+    // Find the most recent saved instance of this exercise (excluding current)
+    const previousInstances = workouts
+      .filter(
+        w => w.exercise === currentExercise.exercise &&
+             w.lastSaved &&
+             // Exclude current exercise
+             !(w.week === currentExercise.week && w.day === currentExercise.day)
+      )
+      .sort((a, b) => {
+        // Sort by week descending, then day descending
+        if (a.week !== b.week) return b.week - a.week
+        return b.day - a.day
+      })
+
+    console.log('Overload calc for:', currentExercise.exercise, 'Week', currentExercise.week, 'Day', currentExercise.day)
+    console.log('Previous instances found:', previousInstances.length)
+    if (previousInstances.length > 0) {
+      console.log('Most recent:', previousInstances[0].week, previousInstances[0].day)
+    }
+
+    if (previousInstances.length === 0) return null
+    const mostRecentInstance = previousInstances[0]
+
+    const prevVolume = calculateWorkoutVolume(mostRecentInstance, bodyweightKg)
     const currentVolume = calculateWorkoutVolume(currentExercise, bodyweightKg)
+
+    console.log('Previous volume:', prevVolume, 'Current volume:', currentVolume)
+
+    if (prevVolume === 0) return null
     if (currentVolume === 0) return null
 
     const change = Math.round(((currentVolume - prevVolume) / prevVolume) * 100)
     if (change > 0) return { direction: 'up' as const, pct: change }
     if (change < 0) return { direction: 'down' as const, pct: Math.abs(change) }
     return { direction: 'same' as const, pct: 0 }
-  }, [currentExercise, workouts])
+  }, [currentExercise, workouts, bodyweightKg])
 
   // Rest Timer state
   const [showTimer, setShowTimer] = useState(false)
@@ -160,6 +202,16 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
     set1?: number; set2?: number; set3?: number; set4?: number; set5?: number;
   } | undefined>(undefined)
   const [prefilledFrom, setPrefilledFrom] = useState<number | null>(null)
+  const [ownNoteEdited, setOwnNoteEdited] = useState(false)
+
+  // Session tracking
+  const [sessionData, setSessionData] = useState<SessionFormData>({
+    duration: undefined,
+    calories: undefined,
+    rpe: undefined,
+  })
+  const [savingSession, setSavingSession] = useState(false)
+  const [sessionSaved, setSessionSaved] = useState(false)
 
   // Sync performance data when current exercise changes
   useEffect(() => {
@@ -180,11 +232,12 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
           load: currentExercise.load || '',
           avgRir: currentExercise.avgRir,
           done: currentExercise.done,
-          notes: currentExercise.notes || '',
+          ownNote: currentExercise.ownNote || '',
         })
         setHasChanges(false)
         setPrefilledFrom(null)
         setPreviousWeekValues(undefined)
+        setOwnNoteEdited(true) // Already has own note, so it's "edited"
       } else {
         // Look up previous week data for reference
         const prevWeek = workouts.find(
@@ -206,10 +259,15 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
           setPreviousWeekValues(undefined)
           setPrefilledFrom(null)
         }
+
+        // Pre-populate ownNote from previous week if it exists
+        const prevOwnNote = prevWeek?.ownNote || ''
+        console.log('Previous week ownNote:', prevOwnNote, 'from week:', prevWeek?.week)
         setPerformanceData({
           set1: undefined, set2: undefined, set3: undefined, set4: undefined, set5: undefined,
-          load: '', avgRir: undefined, done: false, notes: currentExercise.notes || '',
+          load: '', avgRir: undefined, done: false, ownNote: prevOwnNote,
         })
+        setOwnNoteEdited(false) // Not edited yet, showing previous
         setHasChanges(false)
       }
     }
@@ -222,10 +280,38 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
     }
   }, [daysForWeek, currentDay])
 
-  // When day changes, reset index
+  // When day changes, reset index and fetch session data
   useEffect(() => {
     setCurrentIndex(0)
+    setNotesExpanded(false)
+    fetchSessionData()
   }, [currentWeek, currentDay])
+
+  // Fetch existing session data
+  const fetchSessionData = async () => {
+    try {
+      const response = await fetch(`/api/sheets/sessions?week=${currentWeek}&day=${currentDay}`)
+      const data = await response.json()
+      if (data.success && data.data) {
+        setSessionData({
+          duration: data.data.duration,
+          calories: data.data.calories,
+          rpe: data.data.rpe,
+        })
+        setSessionSaved(true)
+      } else {
+        // No existing session, reset form
+        setSessionData({
+          duration: undefined,
+          calories: undefined,
+          rpe: undefined,
+        })
+        setSessionSaved(false)
+      }
+    } catch (error) {
+      console.error('Failed to fetch session:', error)
+    }
+  }
 
   const handleSetChange = useCallback((setNumber: number, value: number | undefined) => {
     setPerformanceData(prev => ({ ...prev, [`set${setNumber}`]: value }))
@@ -235,6 +321,9 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   const handleFieldChange = useCallback((field: string, value: any) => {
     setPerformanceData(prev => ({ ...prev, [field]: value }))
     setHasChanges(true)
+    if (field === 'ownNote') {
+      setOwnNoteEdited(true)
+    }
   }, [])
 
   const handleSave = async () => {
@@ -267,6 +356,55 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   const handleNext = () => {
     if (currentIndex < totalExercises - 1) setCurrentIndex(currentIndex + 1)
   }
+
+  const handleSaveSession = async () => {
+    try {
+      setSavingSession(true)
+      const response = await fetch('/api/sheets/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          week: currentWeek,
+          day: currentDay,
+          ...sessionData,
+        }),
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        setSessionSaved(true)
+        setTimeout(() => setSessionSaved(false), 2000)
+      }
+    } catch (error) {
+      console.error('Failed to save session:', error)
+    } finally {
+      setSavingSession(false)
+    }
+  }
+
+  const handleSessionFieldChange = (field: keyof SessionFormData, value: number | undefined) => {
+    setSessionData(prev => ({ ...prev, [field]: value }))
+    setSessionSaved(false)
+  }
+
+  // Auto-calculate duration based on first and last completed exercise timestamps
+  const calculatedDuration = useMemo(() => {
+    if (sessionData.duration) return sessionData.duration
+
+    // Get completed exercises for this day with lastSaved timestamps
+    const completedExercises = exercises
+      .filter(ex => ex.done && ex.lastSaved)
+      .sort((a, b) => new Date(a.lastSaved!).getTime() - new Date(b.lastSaved!).getTime())
+
+    if (completedExercises.length === 0) return undefined
+
+    const firstTimestamp = new Date(completedExercises[0].lastSaved!).getTime()
+    const lastTimestamp = new Date(completedExercises[completedExercises.length - 1].lastSaved!).getTime()
+
+    // Duration = (last - first) + 3 minutes for the first exercise
+    const durationMs = lastTimestamp - firstTimestamp + (3 * 60 * 1000)
+    return Math.round(durationMs / 60000) // Convert to minutes
+  }, [exercises, sessionData.duration])
 
   // Swipe gesture handling
   const touchStartX = useRef<number | null>(null)
@@ -385,14 +523,6 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
                       New PR!
                     </span>
                   )}
-                  {prInfo?.isPR && !prInfo.isNewPR && (
-                    <span
-                      className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 cursor-help"
-                      title={`Tied PR: ${prInfo.maxLoad} (Week ${prInfo.prWeek}, Day ${prInfo.prDay})`}
-                    >
-                      PR
-                    </span>
-                  )}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-sm text-text-secondary">
@@ -465,6 +595,33 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
             />
           )}
 
+          {/* Exercise Notes (collapsed by default, read-only) */}
+          {currentExercise.notes && (
+            <div className="glass-card p-4">
+              <button
+                onClick={() => setNotesExpanded(!notesExpanded)}
+                className="flex items-center justify-between w-full text-left"
+              >
+                <h3 className="text-sm font-semibold text-text-secondary">
+                  Exercise Notes
+                </h3>
+                <svg
+                  className={`w-4 h-4 text-text-tertiary transition-transform ${notesExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {notesExpanded && (
+                <div className="mt-3 text-sm text-text-primary">
+                  {currentExercise.notes}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Performance Card */}
           <div className="glass-card p-4">
             <h3 className="text-lg font-semibold text-text-primary mb-4">
@@ -510,14 +667,14 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
 
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1">
-                  Notes
+                  Own Notes
                 </label>
                 <textarea
-                  value={performanceData.notes}
-                  onChange={(e) => handleFieldChange('notes', e.target.value)}
+                  value={performanceData.ownNote}
+                  onChange={(e) => handleFieldChange('ownNote', e.target.value)}
                   rows={3}
-                  className="input"
-                  placeholder="Optional notes"
+                  className={`input ${!ownNoteEdited && performanceData.ownNote ? 'italic text-text-tertiary' : ''}`}
+                  placeholder="Your personal notes for this session"
                   disabled={isReadOnly}
                 />
               </div>
@@ -579,6 +736,81 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
           >
             Next
           </Button>
+        </div>
+      )}
+
+      {/* Session Summary - Only show when all exercises are completed */}
+      {allDayCompleted && (
+        <div className="glass-card p-4">
+          <h3 className="text-lg font-semibold text-text-primary mb-4">
+            Session Summary
+          </h3>
+
+          <div className="space-y-4">
+            <Input
+              label="Session Duration (min)"
+              type="number"
+              inputMode="numeric"
+              min="0"
+              value={sessionData.duration ?? calculatedDuration ?? ''}
+              onChange={(e) => handleSessionFieldChange('duration', e.target.value ? parseInt(e.target.value) : undefined)}
+              placeholder="Auto-calculated"
+            />
+
+            <Input
+              label="Calories (Apple Watch)"
+              type="number"
+              inputMode="numeric"
+              min="0"
+              value={sessionData.calories ?? ''}
+              onChange={(e) => handleSessionFieldChange('calories', e.target.value ? parseInt(e.target.value) : undefined)}
+              placeholder="e.g., 450"
+            />
+
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                RPE (Rate of Perceived Exertion) *
+              </label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(value => (
+                  <button
+                    key={value}
+                    onClick={() => handleSessionFieldChange('rpa', value)}
+                    className={`flex-1 py-2 rounded text-sm font-medium transition-colors ${
+                      sessionData.rpe === value
+                        ? 'bg-accent-cyan text-text-primary'
+                        : 'bg-glass-bg/50 text-text-tertiary hover:bg-glass-bg'
+                    }`}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-text-tertiary mt-1">
+                1 = Trivial • 5 = Moderate • 7 = Hard • 9 = Very Hard • 10 = Brutal
+              </p>
+              {!sessionData.rpe && (
+                <p className="text-xs text-accent-amber mt-1">
+                  ⚠️ RPE helps track workout intensity - please rate before saving
+                </p>
+              )}
+            </div>
+
+            <Button
+              variant="primary"
+              onClick={handleSaveSession}
+              loading={savingSession}
+              disabled={savingSession || !sessionData.rpe}
+              fullWidth
+            >
+              {sessionSaved ? 'Session Saved ✓' : 'Save Session'}
+            </Button>
+            {!sessionData.rpe && (
+              <p className="text-xs text-text-tertiary text-center mt-2">
+                Please select an RPE rating to save
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>

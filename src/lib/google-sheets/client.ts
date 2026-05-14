@@ -39,7 +39,7 @@ export class GoogleSheetsClient {
       throw new Error('Sheets client not initialized')
     }
 
-    const fullRange = range || `${GOOGLE_SHEETS_CONFIG.sheetName}!A${GOOGLE_SHEETS_CONFIG.dataStartRow}:Y`
+    const fullRange = range || `${GOOGLE_SHEETS_CONFIG.sheetName}!A${GOOGLE_SHEETS_CONFIG.dataStartRow}:Z`
 
     try {
       const response = await this.retryWithBackoff(async () => {

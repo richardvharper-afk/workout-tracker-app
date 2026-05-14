@@ -69,6 +69,7 @@ export function mapRowToWorkout(row: any[], rowIndex: number): Workout {
     rowIndex: getString(row[SHEET_COLUMNS.ROW_INDEX]) || undefined,
     muscleGroup: getString(row[SHEET_COLUMNS.MUSCLE_GROUP]) || undefined,
     isBodyweight: getString(row[SHEET_COLUMNS.IS_BODYWEIGHT]).toLowerCase() === 'yes',
+    ownNote: getString(row[SHEET_COLUMNS.OWN_NOTE]) || undefined,
   }
 }
 
@@ -76,7 +77,7 @@ export function mapRowToWorkout(row: any[], rowIndex: number): Workout {
  * Convert a Workout object to a sheet row
  */
 export function mapWorkoutToRow(workout: Workout): any[] {
-  const row = new Array(25).fill('') // Initialize with 25 empty cells
+  const row = new Array(26).fill('') // Initialize with 26 empty cells
 
   // Helper to format optional values
   const formatOptional = (value: any): string => {
@@ -108,6 +109,7 @@ export function mapWorkoutToRow(workout: Workout): any[] {
   row[SHEET_COLUMNS.ROW_INDEX] = workout.rowIndex || ''
   row[SHEET_COLUMNS.MUSCLE_GROUP] = workout.muscleGroup || ''
   row[SHEET_COLUMNS.IS_BODYWEIGHT] = workout.isBodyweight ? 'yes' : 'no'
+  row[SHEET_COLUMNS.OWN_NOTE] = workout.ownNote || ''
 
   return row
 }

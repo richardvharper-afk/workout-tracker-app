@@ -29,6 +29,7 @@ export interface Workout {
   rowIndex?: string // Column 22 (position index)
   muscleGroup?: string // Column 23 (priority muscle group)
   isBodyweight?: boolean // Column 24
+  ownNote?: string // Column 25 (personal exercise notes)
 }
 
 export type WorkoutType =
@@ -75,6 +76,7 @@ export interface WorkoutPerformanceData {
   avgRir?: number
   done: boolean
   notes?: string
+  ownNote?: string
 }
 
 // Filter options for workout list
