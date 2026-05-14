@@ -9,6 +9,12 @@ import { requireAuth } from '@/lib/utils/auth'
 export async function GET(request: NextRequest) {
   try {
     const tokens = await requireAuth(request)
+    if (!tokens) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     const service = new BodyMetricsService()
     await service.initialize(tokens)
 

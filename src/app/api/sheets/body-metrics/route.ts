@@ -11,6 +11,12 @@ import { parseISO } from 'date-fns'
 export async function GET(request: NextRequest) {
   try {
     const tokens = await requireAuth(request)
+    if (!tokens) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     const service = new BodyMetricsService()
     await service.initialize(tokens)
 
@@ -36,6 +42,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const tokens = await requireAuth(request)
+    if (!tokens) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     const body = await request.json()
     const formData = body as BodyMetricFormData & { programStartDate?: string }
 

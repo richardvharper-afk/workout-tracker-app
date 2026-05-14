@@ -775,7 +775,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(value => (
                   <button
                     key={value}
-                    onClick={() => handleSessionFieldChange('rpa', value)}
+                    onClick={() => handleSessionFieldChange('rpe', value)}
                     className={`flex-1 py-2 rounded text-sm font-medium transition-colors ${
                       sessionData.rpe === value
                         ? 'bg-accent-cyan text-text-primary'

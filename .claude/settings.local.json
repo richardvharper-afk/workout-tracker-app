@@ -3,7 +3,14 @@
     "allow": [
       "Bash(taskkill:*)",
       "Bash(test:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm run *)",
+      "Bash(sed -i '' 's/rpa:/rpe:/g' \"src/components/workout/ExerciseCarousel.tsx\")",
+      "Bash(sed -i '' 's/\\\\.rpa/.rpe/g' \"src/components/workout/ExerciseCarousel.tsx\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(vercel --prod)"
     ]
   }
 }

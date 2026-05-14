@@ -10,6 +10,12 @@ import { SessionFormData } from '@/types/session'
 export async function GET(request: NextRequest) {
   try {
     const tokens = await requireAuth(request)
+    if (!tokens) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     const { searchParams } = new URL(request.url)
     const week = searchParams.get('week')
     const day = searchParams.get('day')
@@ -48,6 +54,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const tokens = await requireAuth(request)
+    if (!tokens) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     const body = await request.json()
     const { week, day, ...formData } = body as { week: number; day: number } & SessionFormData
 

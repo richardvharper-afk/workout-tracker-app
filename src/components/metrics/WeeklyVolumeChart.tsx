@@ -92,7 +92,7 @@ export function WeeklyVolumeChart({ data }: WeeklyVolumeChartProps) {
               borderRadius: '8px',
               color: '#fff',
             }}
-            formatter={(value: number, name: string) => [value, name]}
+            formatter={(value: any, name: any) => [value, name]}
             labelFormatter={(label) => `Week: ${label}`}
           />
           <Legend

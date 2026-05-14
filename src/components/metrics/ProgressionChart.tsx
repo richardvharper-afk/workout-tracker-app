@@ -104,7 +104,7 @@ export function ProgressionChart({ progression }: ProgressionChartProps) {
               color: '#fff',
               fontSize: '12px',
             }}
-            formatter={(value: any, name: string) => {
+            formatter={(value: any, name: any) => {
               if (name === 'load') return [`${value} kg`, 'Load']
               if (name === 'reps') return [value, 'Top Set Reps']
               return [value, name]

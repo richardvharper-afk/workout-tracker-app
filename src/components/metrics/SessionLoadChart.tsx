@@ -48,7 +48,7 @@ export function SessionLoadChart({ data }: SessionLoadChartProps) {
               borderRadius: '8px',
               color: '#fff',
             }}
-            formatter={(value: number, name: string) => {
+            formatter={(value: any, name: any) => {
               if (name === 'sessionLoad') return [value, 'Session Load']
               if (name === 'rollingAverage') return [value, '4-Session Avg']
               return [value, name]
