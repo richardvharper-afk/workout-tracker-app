@@ -374,9 +374,12 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
       if (data.success) {
         setSessionSaved(true)
         setTimeout(() => setSessionSaved(false), 2000)
+      } else {
+        alert(`Failed to save session: ${data.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Failed to save session:', error)
+      alert(`Error saving session: ${error instanceof Error ? error.message : 'Network error'}`)
     } finally {
       setSavingSession(false)
     }
