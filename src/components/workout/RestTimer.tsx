@@ -11,15 +11,43 @@ interface RestTimerProps {
 
 function parseRestSeconds(rest: string): number {
   const lower = rest.toLowerCase().trim()
+
+  // Handle ranges like "2:30–3:00 min" or "90–120s" - use the upper bound
+  const rangeMatch = lower.match(/[\d:]+[–-]+([\d:]+)\s*(min|s|sec)?/)
+  if (rangeMatch) {
+    const upperValue = rangeMatch[1]
+    const unit = rangeMatch[2]
+    // Parse the upper bound time
+    if (upperValue.includes(':')) {
+      const [min, sec] = upperValue.split(':').map(v => parseInt(v))
+      return min * 60 + (sec || 0)
+    } else if (unit === 'min') {
+      return parseInt(upperValue) * 60
+    } else {
+      return parseInt(upperValue)
+    }
+  }
+
+  // Handle "m:ss" format like "2:30"
+  const colonMatch = lower.match(/(\d+):(\d+)/)
+  if (colonMatch) {
+    const min = parseInt(colonMatch[1])
+    const sec = parseInt(colonMatch[2])
+    return min * 60 + sec
+  }
+
   // "2min", "2 min"
   const minMatch = lower.match(/(\d+)\s*min/)
   if (minMatch) return parseInt(minMatch[1]) * 60
+
   // "90s", "90 s", "90 sec"
   const secMatch = lower.match(/(\d+)\s*s/)
   if (secMatch) return parseInt(secMatch[1])
+
   // Plain number
   const num = parseInt(lower)
   if (!isNaN(num)) return num
+
   return 60 // fallback
 }
 
@@ -41,49 +69,154 @@ function playBeep() {
   }
 }
 
+const TIMER_KEY = 'restTimer'
+
+interface TimerState {
+  startTime: number
+  duration: number
+  pausedAt?: number
+  pausedElapsed?: number
+}
+
 export function RestTimer({ restString, onComplete, onSkip }: RestTimerProps) {
   const totalSeconds = parseRestSeconds(restString)
   const [remaining, setRemaining] = useState(totalSeconds)
   const [paused, setPaused] = useState(false)
   const [completed, setCompleted] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const startTimeRef = useRef<number>(Date.now())
+  const pausedElapsedRef = useRef<number>(0)
 
-  const clearTimer = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
-  }, [])
-
+  // Initialize or resume timer from localStorage
   useEffect(() => {
-    if (paused || completed) {
-      clearTimer()
+    const stored = localStorage.getItem(TIMER_KEY)
+    if (stored) {
+      try {
+        const state: TimerState = JSON.parse(stored)
+
+        // Check if this is the same timer (duration matches)
+        if (state.duration === totalSeconds) {
+          if (state.pausedAt) {
+            // Timer was paused
+            setPaused(true)
+            pausedElapsedRef.current = state.pausedElapsed || 0
+            const calculatedRemaining = Math.max(0, state.duration - pausedElapsedRef.current)
+            setRemaining(calculatedRemaining)
+            startTimeRef.current = Date.now() - pausedElapsedRef.current * 1000
+          } else {
+            // Timer was running - calculate current position
+            const elapsed = Math.floor((Date.now() - state.startTime) / 1000)
+            const calculatedRemaining = Math.max(0, state.duration - elapsed)
+
+            if (calculatedRemaining === 0) {
+              setCompleted(true)
+              setRemaining(0)
+              localStorage.removeItem(TIMER_KEY)
+            } else {
+              setRemaining(calculatedRemaining)
+              startTimeRef.current = state.startTime
+            }
+          }
+        } else {
+          // Different timer - start fresh
+          localStorage.removeItem(TIMER_KEY)
+          startTimeRef.current = Date.now()
+        }
+      } catch (e) {
+        // Invalid state, start fresh
+        localStorage.removeItem(TIMER_KEY)
+        startTimeRef.current = Date.now()
+      }
+    } else {
+      startTimeRef.current = Date.now()
+    }
+  }, [totalSeconds])
+
+  // Save timer state to localStorage
+  const saveTimerState = useCallback(() => {
+    if (completed) {
+      localStorage.removeItem(TIMER_KEY)
       return
     }
 
-    intervalRef.current = setInterval(() => {
-      setRemaining(prev => {
-        if (prev <= 1) {
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    return clearTimer
-  }, [paused, completed, clearTimer])
-
-  useEffect(() => {
-    if (remaining === 0 && !completed) {
-      setCompleted(true)
-      clearTimer()
-      playBeep()
-      if (navigator.vibrate) {
-        navigator.vibrate(500)
-      }
-      onComplete()
+    const state: TimerState = {
+      startTime: startTimeRef.current,
+      duration: totalSeconds,
     }
-  }, [remaining, completed, clearTimer, onComplete])
+
+    if (paused) {
+      state.pausedAt = Date.now()
+      state.pausedElapsed = pausedElapsedRef.current
+    }
+
+    localStorage.setItem(TIMER_KEY, JSON.stringify(state))
+  }, [totalSeconds, paused, completed])
+
+  // Update timer based on elapsed time
+  useEffect(() => {
+    if (paused || completed) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      saveTimerState()
+      return
+    }
+
+    // Update remaining time based on actual elapsed time
+    const updateRemaining = () => {
+      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000)
+      const calculatedRemaining = Math.max(0, totalSeconds - elapsed)
+      setRemaining(calculatedRemaining)
+
+      if (calculatedRemaining === 0 && !completed) {
+        setCompleted(true)
+        clearInterval(intervalRef.current!)
+        intervalRef.current = null
+        playBeep()
+        if (navigator.vibrate) {
+          navigator.vibrate(500)
+        }
+        localStorage.removeItem(TIMER_KEY)
+        onComplete()
+      }
+    }
+
+    updateRemaining() // Initial update
+    intervalRef.current = setInterval(updateRemaining, 100) // Check every 100ms for accuracy
+    saveTimerState()
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+  }, [paused, completed, totalSeconds, saveTimerState, onComplete])
+
+  // Handle pause/resume
+  const handlePauseToggle = () => {
+    if (paused) {
+      // Resuming - adjust start time to account for paused duration
+      const pausedDuration = Math.floor((Date.now() - startTimeRef.current) / 1000) - pausedElapsedRef.current
+      startTimeRef.current = Date.now() - pausedElapsedRef.current * 1000
+      setPaused(false)
+    } else {
+      // Pausing - store elapsed time
+      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000)
+      pausedElapsedRef.current = elapsed
+      setPaused(true)
+    }
+  }
+
+  // Clean up on unmount or skip
+  useEffect(() => {
+    return () => {
+      if (completed) {
+        localStorage.removeItem(TIMER_KEY)
+      }
+    }
+  }, [completed])
 
   const progress = totalSeconds > 0 ? (totalSeconds - remaining) / totalSeconds : 1
   const minutes = Math.floor(remaining / 60)
@@ -140,7 +273,7 @@ export function RestTimer({ restString, onComplete, onSkip }: RestTimerProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setPaused(p => !p)}
+            onClick={handlePauseToggle}
           >
             {paused ? 'Resume' : 'Pause'}
           </Button>
@@ -148,7 +281,10 @@ export function RestTimer({ restString, onComplete, onSkip }: RestTimerProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={onSkip}
+          onClick={() => {
+            localStorage.removeItem(TIMER_KEY)
+            onSkip()
+          }}
         >
           {completed ? 'Dismiss' : 'Skip'}
         </Button>
