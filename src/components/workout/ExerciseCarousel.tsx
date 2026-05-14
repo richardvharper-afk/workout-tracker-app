@@ -210,6 +210,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
     calories: undefined,
     rpe: undefined,
   })
+  const [durationInput, setDurationInput] = useState<string>('')
   const [savingSession, setSavingSession] = useState(false)
   const [sessionSaved, setSessionSaved] = useState(false)
 
@@ -360,14 +361,18 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   const handleSaveSession = async () => {
     try {
       setSavingSession(true)
+      const payload = {
+        week: currentWeek,
+        day: currentDay,
+        duration: sessionData.duration ?? calculatedDuration,
+        calories: sessionData.calories,
+        rpe: sessionData.rpe,
+      }
+      console.log('Saving session with payload:', payload)
       const response = await fetch('/api/sheets/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          week: currentWeek,
-          day: currentDay,
-          ...sessionData,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const data = await response.json()
@@ -392,8 +397,6 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
 
   // Auto-calculate duration based on first and last completed exercise timestamps
   const calculatedDuration = useMemo(() => {
-    if (sessionData.duration) return sessionData.duration
-
     // Get completed exercises for this day with lastSaved timestamps
     const completedExercises = exercises
       .filter(ex => ex.done && ex.lastSaved)
@@ -401,13 +404,22 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
 
     if (completedExercises.length === 0) return undefined
 
-    const firstTimestamp = new Date(completedExercises[0].lastSaved!).getTime()
-    const lastTimestamp = new Date(completedExercises[completedExercises.length - 1].lastSaved!).getTime()
+    const firstTimestamp = new Date(completedExercises[0].lastSaved!)
+    const lastTimestamp = new Date(completedExercises[completedExercises.length - 1].lastSaved!)
+
+    // Only auto-calculate if all exercises were completed on the same day
+    const firstDate = firstTimestamp.toDateString()
+    const lastDate = lastTimestamp.toDateString()
+
+    if (firstDate !== lastDate) {
+      // Multi-day session - don't auto-calculate
+      return undefined
+    }
 
     // Duration = (last - first) + 3 minutes for the first exercise
-    const durationMs = lastTimestamp - firstTimestamp + (3 * 60 * 1000)
+    const durationMs = lastTimestamp.getTime() - firstTimestamp.getTime() + (3 * 60 * 1000)
     return Math.round(durationMs / 60000) // Convert to minutes
-  }, [exercises, sessionData.duration])
+  }, [exercises])
 
   // Swipe gesture handling
   const touchStartX = useRef<number | null>(null)
@@ -745,20 +757,55 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
       {/* Session Summary - Only show when all exercises are completed */}
       {allDayCompleted && (
         <div className="glass-card p-4">
-          <h3 className="text-lg font-semibold text-text-primary mb-4">
-            Session Summary
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-text-primary">
+              Session Summary
+            </h3>
+            {sessionSaved && (
+              <span className="text-xs text-accent-green">✓ Saved</span>
+            )}
+          </div>
 
           <div className="space-y-4">
-            <Input
-              label="Session Duration (min)"
-              type="number"
-              inputMode="numeric"
-              min="0"
-              value={sessionData.duration ?? calculatedDuration ?? ''}
-              onChange={(e) => handleSessionFieldChange('duration', e.target.value ? parseInt(e.target.value) : undefined)}
-              placeholder="Auto-calculated"
-            />
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1">
+                Session Duration
+              </label>
+              <Input
+                type="text"
+                inputMode="text"
+                value={durationInput || (() => {
+                  const totalMinutes = sessionData.duration ?? calculatedDuration ?? 0
+                  const hours = Math.floor(totalMinutes / 60)
+                  const minutes = totalMinutes % 60
+                  return totalMinutes > 0 ? `${hours}:${minutes.toString().padStart(2, '0')}` : ''
+                })()}
+                onChange={(e) => {
+                  setDurationInput(e.target.value)
+                  setSessionSaved(false)
+                }}
+                onBlur={(e) => {
+                  const value = e.target.value.trim()
+                  if (value === '') {
+                    handleSessionFieldChange('duration', undefined)
+                    setDurationInput('')
+                    return
+                  }
+                  const match = value.match(/^(\d+):(\d{2})$/)
+                  if (match) {
+                    const hours = parseInt(match[1])
+                    const minutes = parseInt(match[2])
+                    handleSessionFieldChange('duration', hours * 60 + minutes)
+                    setDurationInput('')
+                  } else {
+                    // Invalid format - revert
+                    setDurationInput('')
+                  }
+                }}
+                placeholder="Auto (hh:mm)"
+              />
+              <p className="text-xs text-text-tertiary mt-1">Format: hh:mm (e.g., 1:25)</p>
+            </div>
 
             <Input
               label="Calories (Apple Watch)"
@@ -806,7 +853,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
               disabled={savingSession || !sessionData.rpe}
               fullWidth
             >
-              {sessionSaved ? 'Session Saved ✓' : 'Save Session'}
+              {savingSession ? 'Saving...' : sessionSaved ? 'Update Session' : 'Save Session'}
             </Button>
             {!sessionData.rpe && (
               <p className="text-xs text-text-tertiary text-center mt-2">

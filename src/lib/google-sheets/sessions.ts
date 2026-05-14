@@ -101,8 +101,11 @@ export class SessionsService {
     day: number,
     formData: SessionFormData
   ): Promise<Session> {
+    console.log('saveSession called with:', { week, day, formData })
+
     // Check if session exists
     const existing = await this.getSession(week, day)
+    console.log('Existing session:', existing)
 
     const session: Session = {
       id: existing?.id || '',
@@ -113,16 +116,21 @@ export class SessionsService {
       rpe: formData.rpe,
       date: format(new Date(), 'yyyy-MM-dd'), // Auto-populate current date
     }
+    console.log('Session to save:', session)
 
     const row = mapSessionToRow(session)
+    console.log('Mapped row:', row)
 
     if (existing) {
-      // Update existing row
-      await this.client.updateRow(parseInt(existing.id), row)
+      // Update existing row in Sessions sheet
+      console.log('Updating existing session at row:', existing.id)
+      await this.client.updateRow(parseInt(existing.id), row, SHEET_NAME)
       session.id = existing.id
     } else {
-      // Append new row
-      const newRowIndex = await this.client.appendRow(row)
+      // Append new row to Sessions sheet
+      console.log('Appending new session to Sessions sheet')
+      const newRowIndex = await this.client.appendRow(row, SHEET_NAME)
+      console.log('New row index:', newRowIndex)
       session.id = newRowIndex.toString()
     }
 

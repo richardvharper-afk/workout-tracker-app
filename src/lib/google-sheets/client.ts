@@ -85,12 +85,13 @@ export class GoogleSheetsClient {
   /**
    * Update a row in the spreadsheet
    */
-  async updateRow(rowNumber: number, values: any[]): Promise<void> {
+  async updateRow(rowNumber: number, values: any[], sheetName?: string): Promise<void> {
     if (!this.sheets) {
       throw new Error('Sheets client not initialized')
     }
 
-    const range = `${GOOGLE_SHEETS_CONFIG.sheetName}!A${rowNumber}:Z${rowNumber}`
+    const targetSheet = sheetName || GOOGLE_SHEETS_CONFIG.sheetName
+    const range = `${targetSheet}!A${rowNumber}:Z${rowNumber}`
 
     try {
       await this.retryWithBackoff(async () => {
@@ -112,12 +113,13 @@ export class GoogleSheetsClient {
   /**
    * Append a new row to the spreadsheet
    */
-  async appendRow(values: any[]): Promise<number> {
+  async appendRow(values: any[], sheetName?: string): Promise<number> {
     if (!this.sheets) {
       throw new Error('Sheets client not initialized')
     }
 
-    const range = `${GOOGLE_SHEETS_CONFIG.sheetName}!A:Y`
+    const targetSheet = sheetName || GOOGLE_SHEETS_CONFIG.sheetName
+    const range = `${targetSheet}!A:Z`
 
     try {
       const response = await this.retryWithBackoff(async () => {
