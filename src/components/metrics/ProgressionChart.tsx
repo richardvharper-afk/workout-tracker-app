@@ -25,8 +25,9 @@ export function ProgressionChart({ progression }: ProgressionChartProps) {
   const chartData = sessions
     .filter(s => s.parsedLoad?.parseSuccess && s.topSetReps !== null)
     .map(s => ({
-      label: `W${s.week}`,
+      label: `W${s.week}.D${s.day}`,
       week: s.week,
+      day: s.day,
       load: s.parsedLoad!.value,
       reps: s.topSetReps,
       rir: s.actualRIR,

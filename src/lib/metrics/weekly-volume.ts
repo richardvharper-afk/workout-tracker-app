@@ -1,4 +1,5 @@
 import { Workout } from '@/types/workout'
+import { normalizeMuscle } from '@/lib/utils/muscles'
 
 export interface MuscleVolume {
   muscle: string
@@ -13,13 +14,18 @@ export interface WeeklyVolume {
   muscles: MuscleVolume[]
 }
 
-// Default goal muscles - configurable
+// Default goal muscles - using normalized groups from muscle heatmap
 export const DEFAULT_GOAL_MUSCLES = [
-  'Pectorals',
-  'Deltoids',
-  'Medial Deltoids',
-  'Biceps',
-  'Brachialis',
+  'chest',
+  'shoulders',
+  'back',
+  'biceps',
+  'triceps',
+  'core',
+  'quads',
+  'hamstrings',
+  'glutes',
+  'calves',
 ]
 
 /**
@@ -75,7 +81,8 @@ export function calculateWeeklyVolume(
     const muscleMap = new Map<string, number>()
 
     workingSets.forEach(workout => {
-      const muscle = workout.muscleGroup || 'Unknown'
+      const rawMuscle = workout.muscleGroup || 'Unknown'
+      const muscle = rawMuscle === 'Unknown' ? 'Unknown' : normalizeMuscle(rawMuscle)
       const currentSets = muscleMap.get(muscle) || 0
       // Use prescribed sets (workout.sets), not count of Set1-5
       muscleMap.set(muscle, currentSets + workout.sets)

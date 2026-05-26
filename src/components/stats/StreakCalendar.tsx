@@ -5,10 +5,9 @@ import { Workout } from '@/types/workout'
 
 interface StreakCalendarProps {
   workouts: Workout[]
-  streak: number
 }
 
-export function StreakCalendar({ workouts: allWorkouts, streak }: StreakCalendarProps) {
+export function StreakCalendar({ workouts: allWorkouts }: StreakCalendarProps) {
   // Filter out workouts with invalid week/day (e.g., week 0 from empty cells)
   const workouts = allWorkouts.filter(w => w.week >= 1)
   // Build a 12-week grid (last 12 weeks worth of program days)
@@ -57,13 +56,27 @@ export function StreakCalendar({ workouts: allWorkouts, streak }: StreakCalendar
     return 'bg-accent-green/40'
   }
 
+  // Calculate streak: consecutive weeks with at least 3 workouts marked done
+  const weekDoneCount = new Map<number, number>()
+  workouts.forEach(w => {
+    if (w.done) {
+      weekDoneCount.set(w.week, (weekDoneCount.get(w.week) || 0) + 1)
+    }
+  })
+  const sortedWeeks = Array.from(weekDoneCount.entries()).sort((a, b) => b[0] - a[0])
+  let streak = 0
+  for (const [_, count] of sortedWeeks) {
+    if (count >= 3) streak++
+    else break
+  }
+
   return (
     <div className="glass-card p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-text-primary">Activity</h3>
         <div className="flex items-center gap-1.5">
           <span className="text-accent-cyan text-lg font-bold">{streak}</span>
-          <span className="text-xs text-text-tertiary">day streak</span>
+          <span className="text-xs text-text-tertiary">week streak</span>
         </div>
       </div>
 

@@ -24,26 +24,28 @@ export function SetInput({ setNumber, value, onChange, disabled, placeholder, pr
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <label className="text-sm font-medium text-text-secondary min-w-[60px]">
-        Set {setNumber}:
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-medium text-text-tertiary">
+        Set {setNumber}
       </label>
-      <Input
-        type="number"
-        inputMode="numeric"
-        min="0"
-        max="100"
-        value={value ?? ''}
-        onChange={handleChange}
-        disabled={disabled}
-        placeholder={placeholder || "Reps"}
-        className="text-center"
-      />
-      {previousValue != null && (
-        <span className="text-xs text-accent-amber whitespace-nowrap">
-          {previousValue}
-        </span>
-      )}
+      <div className="flex items-center gap-2">
+        <Input
+          type="number"
+          inputMode="numeric"
+          min="0"
+          max="100"
+          value={value ?? ''}
+          onChange={handleChange}
+          disabled={disabled}
+          placeholder={placeholder || "Reps"}
+          className="text-center"
+        />
+        {previousValue != null && (
+          <span className="text-xs text-accent-amber whitespace-nowrap">
+            {previousValue}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
@@ -101,18 +103,20 @@ export function SetInputGroup({ sets, values, onChange, disabled, previousValues
   }
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-medium text-text-primary">Actual Performance</h3>
-      {setNumbers.map((setNum) => (
-        <SetInput
-          key={setNum}
-          setNumber={setNum}
-          value={getSetValue(setNum)}
-          onChange={(value) => onChange(setNum, value)}
-          disabled={disabled}
-          previousValue={getPreviousValue(setNum)}
-        />
-      ))}
+    <div>
+      <h3 className="text-sm font-medium text-text-primary mb-3">Actual Performance</h3>
+      <div className="grid grid-cols-2 gap-3">
+        {setNumbers.map((setNum) => (
+          <SetInput
+            key={setNum}
+            setNumber={setNum}
+            value={getSetValue(setNum)}
+            onChange={(value) => onChange(setNum, value)}
+            disabled={disabled}
+            previousValue={getPreviousValue(setNum)}
+          />
+        ))}
+      </div>
     </div>
   )
 }

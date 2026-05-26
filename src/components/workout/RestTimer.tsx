@@ -76,6 +76,7 @@ interface TimerState {
   duration: number
   pausedAt?: number
   pausedElapsed?: number
+  timerId: string // Unique ID for this specific timer instance
 }
 
 export function RestTimer({ restString, onComplete, onSkip }: RestTimerProps) {
@@ -86,6 +87,7 @@ export function RestTimer({ restString, onComplete, onSkip }: RestTimerProps) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const startTimeRef = useRef<number>(Date.now())
   const pausedElapsedRef = useRef<number>(0)
+  const timerIdRef = useRef<string>(Date.now().toString()) // Unique ID for this timer instance
 
   // Initialize or resume timer from localStorage
   useEffect(() => {
@@ -94,43 +96,42 @@ export function RestTimer({ restString, onComplete, onSkip }: RestTimerProps) {
       try {
         const state: TimerState = JSON.parse(stored)
 
-        // Check if this is the same timer (duration matches)
-        if (state.duration === totalSeconds) {
-          if (state.pausedAt) {
-            // Timer was paused
-            setPaused(true)
-            pausedElapsedRef.current = state.pausedElapsed || 0
-            const calculatedRemaining = Math.max(0, state.duration - pausedElapsedRef.current)
-            setRemaining(calculatedRemaining)
-            startTimeRef.current = Date.now() - pausedElapsedRef.current * 1000
-          } else {
-            // Timer was running - calculate current position
-            const elapsed = Math.floor((Date.now() - state.startTime) / 1000)
-            const calculatedRemaining = Math.max(0, state.duration - elapsed)
+        // Resume existing timer regardless of duration
+        // This allows timer to persist when switching between exercises
+        timerIdRef.current = state.timerId
 
-            if (calculatedRemaining === 0) {
-              setCompleted(true)
-              setRemaining(0)
-              localStorage.removeItem(TIMER_KEY)
-            } else {
-              setRemaining(calculatedRemaining)
-              startTimeRef.current = state.startTime
-            }
-          }
+        if (state.pausedAt) {
+          // Timer was paused
+          setPaused(true)
+          pausedElapsedRef.current = state.pausedElapsed || 0
+          const calculatedRemaining = Math.max(0, state.duration - pausedElapsedRef.current)
+          setRemaining(calculatedRemaining)
+          startTimeRef.current = Date.now() - pausedElapsedRef.current * 1000
         } else {
-          // Different timer - start fresh
-          localStorage.removeItem(TIMER_KEY)
-          startTimeRef.current = Date.now()
+          // Timer was running - calculate current position
+          const elapsed = Math.floor((Date.now() - state.startTime) / 1000)
+          const calculatedRemaining = Math.max(0, state.duration - elapsed)
+
+          if (calculatedRemaining === 0) {
+            setCompleted(true)
+            setRemaining(0)
+            localStorage.removeItem(TIMER_KEY)
+          } else {
+            setRemaining(calculatedRemaining)
+            startTimeRef.current = state.startTime
+          }
         }
       } catch (e) {
         // Invalid state, start fresh
         localStorage.removeItem(TIMER_KEY)
         startTimeRef.current = Date.now()
+        timerIdRef.current = Date.now().toString()
       }
     } else {
       startTimeRef.current = Date.now()
+      timerIdRef.current = Date.now().toString()
     }
-  }, [totalSeconds])
+  }, []) // Run only once on mount
 
   // Save timer state to localStorage
   const saveTimerState = useCallback(() => {
@@ -142,6 +143,7 @@ export function RestTimer({ restString, onComplete, onSkip }: RestTimerProps) {
     const state: TimerState = {
       startTime: startTimeRef.current,
       duration: totalSeconds,
+      timerId: timerIdRef.current,
     }
 
     if (paused) {

@@ -26,31 +26,42 @@ export function calculateSessionLoad(session: Session): number | null {
 }
 
 /**
- * Calculate session load for all sessions
- * Returns array sorted by week, day
+ * Calculate session load for all sessions, aggregated by week
+ * Returns array sorted by week
  */
 export function calculateAllSessionLoads(sessions: Session[]): SessionLoadData[] {
-  const loads: SessionLoadData[] = []
+  // First, calculate individual session loads
+  const individualLoads: Array<{ week: number; sessionLoad: number }> = []
 
   sessions.forEach(session => {
     const sessionLoad = calculateSessionLoad(session)
+    if (sessionLoad !== null) {
+      individualLoads.push({ week: session.week, sessionLoad })
+    }
+  })
 
-    // Skip sessions with missing RPA or duration
-    if (sessionLoad === null) return
+  // Aggregate by week (sum all sessions in each week)
+  const weekMap = new Map<number, number>()
+  individualLoads.forEach(({ week, sessionLoad }) => {
+    weekMap.set(week, (weekMap.get(week) || 0) + sessionLoad)
+  })
 
+  // Convert to array format
+  const loads: SessionLoadData[] = []
+  weekMap.forEach((totalLoad, week) => {
     loads.push({
-      week: session.week,
-      day: session.day,
-      sessionLoad,
-      rpe: session.rpe!,
-      duration: session.duration!,
-      label: `W${session.week}.D${session.day}`,
-      date: session.date,
+      week,
+      day: 0, // No longer relevant for weekly aggregate
+      sessionLoad: Math.round(totalLoad),
+      rpe: 0, // Average RPE not meaningful for weekly aggregate
+      duration: 0, // Total duration not as meaningful
+      label: `W${week}`,
+      date: undefined,
     })
   })
 
-  // Sort by week, then day
-  return loads.sort((a, b) => (a.week !== b.week ? a.week - b.week : a.day - b.day))
+  // Sort by week
+  return loads.sort((a, b) => a.week - b.week)
 }
 
 /**

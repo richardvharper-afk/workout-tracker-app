@@ -96,6 +96,8 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [hasChanges, setHasChanges] = useState(false)
   const [notesExpanded, setNotesExpanded] = useState(false)
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false)
+  const [ownNoteExpanded, setOwnNoteExpanded] = useState(false)
   const [performanceData, setPerformanceData] = useState<WorkoutPerformanceData>({
     set1: undefined, set2: undefined, set3: undefined, set4: undefined, set5: undefined,
     load: '', avgRir: undefined, done: false, ownNote: '',
@@ -203,6 +205,8 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   } | undefined>(undefined)
   const [prefilledFrom, setPrefilledFrom] = useState<number | null>(null)
   const [ownNoteEdited, setOwnNoteEdited] = useState(false)
+  const [loadEdited, setLoadEdited] = useState(false)
+  const [avgRirEdited, setAvgRirEdited] = useState(false)
 
   // Session tracking
   const [sessionData, setSessionData] = useState<SessionFormData>({
@@ -239,6 +243,8 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
         setPrefilledFrom(null)
         setPreviousWeekValues(undefined)
         setOwnNoteEdited(true) // Already has own note, so it's "edited"
+        setLoadEdited(true) // Already has load
+        setAvgRirEdited(true) // Already has avgRir
       } else {
         // Look up previous week data for reference
         const prevWeek = workouts.find(
@@ -261,14 +267,18 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
           setPrefilledFrom(null)
         }
 
-        // Pre-populate ownNote from previous week if it exists
+        // Pre-populate ownNote, load, and avgRir from previous week if they exist
         const prevOwnNote = prevWeek?.ownNote || ''
-        console.log('Previous week ownNote:', prevOwnNote, 'from week:', prevWeek?.week)
+        const prevLoad = prevWeek?.load || ''
+        const prevAvgRir = prevWeek?.avgRir
+        console.log('Previous week ownNote:', prevOwnNote, 'load:', prevLoad, 'avgRir:', prevAvgRir, 'from week:', prevWeek?.week)
         setPerformanceData({
           set1: undefined, set2: undefined, set3: undefined, set4: undefined, set5: undefined,
-          load: '', avgRir: undefined, done: false, ownNote: prevOwnNote,
+          load: prevLoad, avgRir: prevAvgRir, done: false, ownNote: prevOwnNote,
         })
         setOwnNoteEdited(false) // Not edited yet, showing previous
+        setLoadEdited(false) // Not edited yet, showing previous
+        setAvgRirEdited(false) // Not edited yet, showing previous
         setHasChanges(false)
       }
     }
@@ -568,8 +578,31 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
               </div>
             </div>
 
+            {/* Description (collapsed by default) */}
             {currentExercise.description && (
-              <p className="text-text-secondary mb-4">{currentExercise.description}</p>
+              <div className="glass-card p-4 mb-4">
+                <button
+                  onClick={() => setDescriptionExpanded(!descriptionExpanded)}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <h3 className="text-sm font-semibold text-text-secondary">
+                    Description
+                  </h3>
+                  <svg
+                    className={`w-4 h-4 text-text-tertiary transition-transform ${descriptionExpanded ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {descriptionExpanded && (
+                  <div className="mt-3 text-sm text-text-primary">
+                    {currentExercise.description}
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="grid grid-cols-2 gap-3 text-sm">
@@ -649,49 +682,130 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
             )}
 
             <div className="space-y-4">
-              <SetInputGroup
-                sets={currentExercise.sets}
-                values={performanceData}
-                onChange={handleSetChange}
-                disabled={isReadOnly}
-                previousValues={previousWeekValues}
-              />
-
-              <Input
-                label="Load / Variation"
-                type="text"
-                value={performanceData.load}
-                onChange={(e) => handleFieldChange('load', e.target.value)}
-                placeholder="e.g., 135 lbs or Bodyweight"
-                disabled={isReadOnly}
-              />
-
-              <Input
-                label="Average RIR"
-                type="number"
-                inputMode="numeric"
-                min="0"
-                max="10"
-                value={performanceData.avgRir ?? ''}
-                onChange={(e) =>
-                  handleFieldChange('avgRir', e.target.value ? parseFloat(e.target.value) : undefined)
-                }
-                placeholder="0-10"
-                disabled={isReadOnly}
-              />
-
+              {/* Sets + Load + Avg RIR in 2-column grid */}
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">
-                  Own Notes
-                </label>
-                <textarea
-                  value={performanceData.ownNote}
-                  onChange={(e) => handleFieldChange('ownNote', e.target.value)}
-                  rows={3}
-                  className={`input ${!ownNoteEdited && performanceData.ownNote ? 'italic text-text-tertiary' : ''}`}
-                  placeholder="Your personal notes for this session"
-                  disabled={isReadOnly}
-                />
+                <h3 className="text-sm font-medium text-text-primary mb-3">Actual Performance</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Set inputs */}
+                  {Array.from({ length: Math.min(currentExercise.sets, 5) }, (_, i) => i + 1).map((setNum) => {
+                    const getSetValue = (n: number) => {
+                      switch (n) {
+                        case 1: return performanceData.set1
+                        case 2: return performanceData.set2
+                        case 3: return performanceData.set3
+                        case 4: return performanceData.set4
+                        case 5: return performanceData.set5
+                        default: return undefined
+                      }
+                    }
+                    const getPrevValue = (n: number) => {
+                      if (!previousWeekValues) return undefined
+                      switch (n) {
+                        case 1: return previousWeekValues.set1
+                        case 2: return previousWeekValues.set2
+                        case 3: return previousWeekValues.set3
+                        case 4: return previousWeekValues.set4
+                        case 5: return previousWeekValues.set5
+                        default: return undefined
+                      }
+                    }
+                    return (
+                      <div key={setNum} className="flex flex-col gap-1">
+                        <label className="text-xs font-medium text-text-tertiary">
+                          Set {setNum}
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            min="0"
+                            max="100"
+                            value={getSetValue(setNum) ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              handleSetChange(setNum, val === '' ? undefined : parseInt(val, 10))
+                            }}
+                            disabled={isReadOnly}
+                            placeholder="Reps"
+                            className="text-center"
+                          />
+                          {getPrevValue(setNum) != null && (
+                            <span className="text-xs text-accent-amber whitespace-nowrap">
+                              {getPrevValue(setNum)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {/* Load */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-text-tertiary">Load</label>
+                    <Input
+                      type="text"
+                      value={performanceData.load}
+                      onChange={(e) => {
+                        handleFieldChange('load', e.target.value)
+                        setLoadEdited(true)
+                      }}
+                      placeholder="e.g., 10kg"
+                      disabled={isReadOnly}
+                      className={!loadEdited && performanceData.load ? 'italic text-text-tertiary' : ''}
+                    />
+                  </div>
+
+                  {/* Avg RIR */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-text-tertiary">Avg RIR</label>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      max="10"
+                      value={performanceData.avgRir ?? ''}
+                      onChange={(e) => {
+                        handleFieldChange('avgRir', e.target.value ? parseFloat(e.target.value) : undefined)
+                        setAvgRirEdited(true)
+                      }}
+                      placeholder="0-10"
+                      disabled={isReadOnly}
+                      className={!avgRirEdited && performanceData.avgRir !== undefined ? 'text-center italic text-text-tertiary' : 'text-center'}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Own Notes (collapsible) */}
+              <div className="border border-glass-border rounded-lg p-3">
+                <button
+                  onClick={() => setOwnNoteExpanded(!ownNoteExpanded)}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <h3 className="text-sm font-semibold text-text-secondary">
+                    Own Notes
+                  </h3>
+                  <svg
+                    className={`w-4 h-4 text-text-tertiary transition-transform ${ownNoteExpanded ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {ownNoteExpanded && (
+                  <div className="mt-3">
+                    <textarea
+                      value={performanceData.ownNote}
+                      onChange={(e) => handleFieldChange('ownNote', e.target.value)}
+                      rows={3}
+                      className={`input ${!ownNoteEdited && performanceData.ownNote ? 'italic text-text-tertiary' : ''}`}
+                      placeholder="Your personal notes for this session"
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                )}
               </div>
 
               <Checkbox

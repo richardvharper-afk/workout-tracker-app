@@ -336,16 +336,6 @@ export default function ProfilePage() {
         </Card>
 
         <Card padding="lg">
-          <h3 className="text-sm font-medium text-text-tertiary mb-3">Development</h3>
-          <Link
-            href="/metrics"
-            className="block p-3 bg-accent-cyan/10 border border-accent-cyan/30 rounded text-sm text-accent-cyan hover:bg-accent-cyan/20 transition-colors"
-          >
-            🚧 New Metrics System (In Progress)
-          </Link>
-        </Card>
-
-        <Card padding="lg">
           <h3 className="text-sm font-medium text-text-tertiary mb-2">About</h3>
           <p className="text-sm text-text-secondary">
             This app syncs with your private Google Sheet to track your workout

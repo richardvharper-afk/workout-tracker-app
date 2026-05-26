@@ -43,6 +43,14 @@ export function WeeklyVolumeChart({ data }: WeeklyVolumeChartProps) {
     new Set(data.flatMap(w => w.muscles.filter(m => m.isGoalMuscle).map(m => m.muscle)))
   ).sort()
 
+  // Get latest week's threshold status for each muscle
+  // Find the last week with actual muscle data (not empty)
+  const latestWeekWithData = [...data].reverse().find(w => w.muscles.length > 0)
+  const muscleThresholds = new Map<string, string>()
+  latestWeekWithData?.muscles.forEach(m => {
+    muscleThresholds.set(m.muscle, m.threshold)
+  })
+
   // Format data for stacked bar chart, grouping non-goal muscles as "Other"
   const chartData = data.map(wv => {
     const dataPoint: any = {
@@ -98,6 +106,43 @@ export function WeeklyVolumeChart({ data }: WeeklyVolumeChartProps) {
           <Legend
             wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
             iconType="square"
+            content={({ payload }) => {
+              if (!payload) return null
+              return (
+                <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center mt-3">
+                  {payload.map((entry: any, index: number) => {
+                    const displayName = entry.value
+                    // entry.dataKey is the actual muscle key (lowercase like 'chest')
+                    const muscleKey = entry.dataKey
+                    const threshold = muscleThresholds.get(muscleKey)
+                    const thresholdColor = threshold === 'under' ? '#facc15' :
+                      threshold === 'optimal' ? '#10b981' :
+                      threshold === 'high' ? '#fb923c' :
+                      threshold === 'very-high' ? '#f87171' :
+                      'transparent'
+
+                    return (
+                      <div key={`legend-${index}`} className="flex items-center gap-1.5">
+                        <div
+                          style={{ backgroundColor: entry.color }}
+                          className="w-3 h-3 rounded-sm"
+                        />
+                        <span className="text-[11px] text-text-secondary">
+                          {displayName}
+                        </span>
+                        {threshold && threshold !== 'none' && (
+                          <div
+                            style={{ backgroundColor: thresholdColor }}
+                            className="w-2 h-2 rounded-full"
+                            title={`${threshold}`}
+                          />
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            }}
           />
           {displayMuscles.map((muscle, index) => (
             <Bar
@@ -105,40 +150,41 @@ export function WeeklyVolumeChart({ data }: WeeklyVolumeChartProps) {
               dataKey={muscle}
               stackId="a"
               fill={muscle === 'Other' ? '#6b7280' : MUSCLE_COLORS[index % MUSCLE_COLORS.length]}
+              name={muscle.charAt(0).toUpperCase() + muscle.slice(1)}
             />
           ))}
         </BarChart>
       </ResponsiveContainer>
 
       {/* Threshold Guide */}
-      <div className="mt-4 p-3 bg-glass-bg/30 rounded text-xs">
-        <h4 className="font-semibold text-text-secondary mb-2">Volume Thresholds (Goal Muscles Only):</h4>
+      <div className="mt-4 p-3 bg-glass-bg border border-glass-border rounded text-xs">
+        <h4 className="font-semibold text-text-secondary mb-2">Volume Thresholds (colored dots in legend):</h4>
         <div className="grid grid-cols-2 gap-2">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: getThresholdColor('under') }}></div>
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getThresholdColor('under') }}></div>
             <span className="text-text-tertiary">{getThresholdLabel('under')}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: getThresholdColor('optimal') }}></div>
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getThresholdColor('optimal') }}></div>
             <span className="text-text-tertiary">{getThresholdLabel('optimal')}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: getThresholdColor('high') }}></div>
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getThresholdColor('high') }}></div>
             <span className="text-text-tertiary">{getThresholdLabel('high')}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: getThresholdColor('very-high') }}></div>
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getThresholdColor('very-high') }}></div>
             <span className="text-text-tertiary">{getThresholdLabel('very-high')}</span>
           </div>
         </div>
       </div>
 
       {/* Current Week Summary - Goal Muscles Only */}
-      {data.length > 0 && (
+      {latestWeekWithData && (
         <div className="mt-4 p-3 border border-accent-cyan/30 rounded">
-          <h4 className="font-semibold text-text-primary mb-2">Week {data[data.length - 1].week} Summary (Goal Muscles):</h4>
+          <h4 className="font-semibold text-text-primary mb-2">Week {latestWeekWithData.week} Summary (Goal Muscles):</h4>
           <div className="grid grid-cols-2 gap-2 text-xs">
-            {data[data.length - 1].muscles.filter(m => m.isGoalMuscle).map(m => (
+            {latestWeekWithData.muscles.filter(m => m.isGoalMuscle).map(m => (
               <div key={m.muscle} className="flex justify-between">
                 <span className="text-text-secondary">{m.muscle}:</span>
                 <span className={`font-semibold ${

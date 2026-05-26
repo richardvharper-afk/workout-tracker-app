@@ -93,11 +93,16 @@ export class WorkoutsService {
     }
 
     // Merge with updates
+    // Only update lastSaved if explicitly provided in data, or if we're marking as done for the first time
+    const shouldUpdateTimestamp =
+      data.lastSaved !== undefined ||
+      (data.done === true && !existingWorkout.done)
+
     const updatedWorkout: Workout = {
       ...existingWorkout,
       ...data,
       id,
-      lastSaved: new Date().toISOString(),
+      lastSaved: shouldUpdateTimestamp ? (data.lastSaved || new Date().toISOString()) : existingWorkout.lastSaved,
     }
 
     // Update the row

@@ -39,7 +39,7 @@ export function SessionLoadChart({ data }: SessionLoadChartProps) {
           <YAxis
             stroke="rgba(255,255,255,0.5)"
             style={{ fontSize: '12px' }}
-            label={{ value: 'Session Load', angle: -90, position: 'insideLeft', style: { fill: 'rgba(255,255,255,0.5)' } }}
+            label={{ value: 'Weekly Load', angle: -90, position: 'insideLeft', style: { fill: 'rgba(255,255,255,0.5)' } }}
           />
           <Tooltip
             contentStyle={{
@@ -49,11 +49,11 @@ export function SessionLoadChart({ data }: SessionLoadChartProps) {
               color: '#fff',
             }}
             formatter={(value: any, name: any) => {
-              if (name === 'sessionLoad') return [value, 'Session Load']
-              if (name === 'rollingAverage') return [value, '4-Session Avg']
+              if (name === 'sessionLoad') return [value, 'Weekly Load']
+              if (name === 'rollingAverage') return [value, '4-Week Avg']
               return [value, name]
             }}
-            labelFormatter={(label) => `Session: ${label}`}
+            labelFormatter={(label) => `Week: ${label}`}
           />
           <Legend
             wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
@@ -65,7 +65,7 @@ export function SessionLoadChart({ data }: SessionLoadChartProps) {
             stroke="#22d3ee"
             strokeWidth={2}
             dot={{ fill: '#22d3ee', r: 4 }}
-            name="Session Load"
+            name="Weekly Load"
           />
           <Line
             type="monotone"
@@ -74,19 +74,19 @@ export function SessionLoadChart({ data }: SessionLoadChartProps) {
             strokeWidth={2}
             strokeDasharray="5 5"
             dot={false}
-            name="4-Session Avg"
+            name="4-Week Avg"
           />
         </LineChart>
       </ResponsiveContainer>
 
       {/* Interpretation Guide */}
-      <div className="mt-4 p-3 bg-glass-bg/30 rounded text-xs">
-        <h4 className="font-semibold text-text-secondary mb-2">Interpretation Guide:</h4>
+      <div className="mt-4 p-3 bg-glass-bg border border-glass-border rounded text-xs">
+        <h4 className="font-semibold text-text-secondary mb-2">How to Read This Chart:</h4>
         <ul className="space-y-1 text-text-tertiary">
-          <li>• <span className="text-accent-cyan">400-600</span> = Moderate working block</li>
-          <li>• <span className="text-accent-green">600-800</span> = Hard working block</li>
-          <li>• <span className="text-accent-amber">&gt;800</span> = Very high; check recovery markers</li>
-          <li>• Sudden drops = Good if scheduled (deload), concerning if not</li>
+          <li>• Consistent week-to-week = Sustainable training rhythm</li>
+          <li>• Gradual increases = Progressive overload working</li>
+          <li>• Sharp drops = Deload (if planned) or missed sessions</li>
+          <li>• Yellow dashed line (4-week average) smooths out weekly fluctuations</li>
         </ul>
       </div>
     </div>

@@ -30,6 +30,13 @@ export function Calendar({ workouts, onRefetch }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
 
+  // Debug: log workouts for week 14 day 3
+  const w14d3 = workouts.filter(w => w.week === 14 && w.day === 3)
+  if (w14d3.length > 0) {
+    console.log('Week 14 Day 3 workouts:', w14d3.length)
+    console.log('IDs:', w14d3.map(w => `${w.id}:${w.exercise}`))
+  }
+
   // Schedule: Day 1 = Monday, Day 2 = Wednesday, Day 3 = Friday
   const DAY_OFFSETS: Record<number, number> = { 1: 0, 2: 2, 3: 4 }
 
@@ -38,22 +45,39 @@ export function Calendar({ workouts, onRefetch }: CalendarProps) {
   // 2. For each date, include ALL exercises from that week+day (saved and unsaved)
   // 3. Place planned (fully unsaved) days using Mon/Wed/Fri schedule
   const workoutsByDay = useMemo(() => {
+    // Debug: check for duplicate IDs in source data
+    const idCounts = new Map<string, number>()
+    workouts.forEach(w => {
+      idCounts.set(w.id, (idCounts.get(w.id) || 0) + 1)
+    })
+    const duplicateIds = Array.from(idCounts.entries()).filter(([_, count]) => count > 1)
+    if (duplicateIds.length > 0) {
+      console.warn('Duplicate workout IDs detected:', duplicateIds)
+    }
+
     const map: Record<string, Workout[]> = {}
 
     // Infer Week 1 Monday from a saved workout
+    // Find the earliest saved workout to minimize drift from edited timestamps
     let week1Monday: Date | null = null
-    const saved = workouts.find(w => w.lastSaved && DAY_OFFSETS[w.day] !== undefined)
-    if (saved) {
+    const savedWithDates = workouts
+      .filter(w => w.lastSaved && DAY_OFFSETS[w.day] !== undefined)
+      .sort((a, b) => (a.week * 10 + a.day) - (b.week * 10 + b.day)) // Sort by week then day
+
+    if (savedWithDates.length > 0) {
+      const saved = savedWithDates[0] // Use earliest week+day combo
       const savedDate = new Date(saved.lastSaved!)
       savedDate.setHours(0, 0, 0, 0)
       const totalOffset = (saved.week - 1) * 7 + (DAY_OFFSETS[saved.day] ?? 0)
       week1Monday = new Date(savedDate)
       week1Monday.setDate(savedDate.getDate() - totalOffset)
+      console.log(`Inferred week1Monday from W${saved.week}D${saved.day} on ${savedDate.toDateString()}: ${week1Monday.toDateString()}`)
     }
 
     // Track which week+day combos have a calendar date from saved data
     // key: "week-day", value: calendar day number
     const weekDayToCalendarDay: Record<string, number> = {}
+    const placedWorkouts = new Set<string>() // Track which workouts we've already placed
 
     // First pass: place saved workouts and record their calendar dates
     workouts.forEach(w => {
@@ -65,27 +89,36 @@ export function Calendar({ workouts, onRefetch }: CalendarProps) {
         if (!map[key]) map[key] = []
         map[key].push(w)
         weekDayToCalendarDay[`${w.week}-${w.day}`] = dayNum
+        placedWorkouts.add(w.id) // Mark as placed
+        if (w.week === 15 && w.day === 3) {
+          console.log(`First pass placed W15D3 ${w.exercise} on day ${dayNum}`)
+        }
       }
     })
 
-    // Second pass: place unsaved workouts on the same calendar date as
-    // their saved siblings, or use Mon/Wed/Fri schedule for fully unsaved days
+    // Second pass: place unsaved workouts using Mon/Wed/Fri schedule only
+    // Do NOT co-locate them with saved workouts from the same day number,
+    // as saved dates may have been edited and moved
     workouts.forEach(w => {
-      if (w.lastSaved) return // already placed
+      if (placedWorkouts.has(w.id)) return // Skip if already placed
 
       const wdKey = `${w.week}-${w.day}`
       let dayNum: number | null = null
 
-      if (weekDayToCalendarDay[wdKey] !== undefined) {
-        // Some exercises in this week+day were saved — use the same date
-        dayNum = weekDayToCalendarDay[wdKey]
-      } else if (week1Monday && DAY_OFFSETS[w.day] !== undefined) {
-        // Fully unsaved day — use schedule offset
-        const totalOffset = (w.week - 1) * 7 + DAY_OFFSETS[w.day]
+      // Only use schedule calculation for unsaved workouts
+      if (week1Monday && DAY_OFFSETS[w.day] !== undefined) {
+        // Account for rest week after W12 (gap week of May 4-10, 2026)
+        const hasRestWeek = w.week > 12
+        const restWeekOffset = hasRestWeek ? 7 : 0
+
+        const totalOffset = (w.week - 1) * 7 + DAY_OFFSETS[w.day] + restWeekOffset
         const date = new Date(week1Monday)
         date.setDate(week1Monday.getDate() + totalOffset)
         if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
           dayNum = date.getDate()
+          if (w.week === 15 && w.day === 3) {
+            console.log(`Placing W${w.week}D${w.day} ${w.exercise} on day ${dayNum}`, { week1Monday: week1Monday.toDateString(), totalOffset, restWeekOffset, calculatedDate: date.toDateString() })
+          }
         }
       }
 
@@ -93,6 +126,22 @@ export function Calendar({ workouts, onRefetch }: CalendarProps) {
         const key = String(dayNum)
         if (!map[key]) map[key] = []
         map[key].push(w)
+        placedWorkouts.add(w.id)
+      }
+    })
+
+    // Deduplicate workouts by ID in each day
+    Object.keys(map).forEach(dayKey => {
+      const beforeCount = map[dayKey].length
+      const seen = new Set<string>()
+      map[dayKey] = map[dayKey].filter(w => {
+        if (seen.has(w.id)) return false
+        seen.add(w.id)
+        return true
+      })
+      const afterCount = map[dayKey].length
+      if (beforeCount !== afterCount) {
+        console.warn(`Day ${dayKey}: Removed ${beforeCount - afterCount} duplicate(s). Week ${map[dayKey][0]?.week} Day ${map[dayKey][0]?.day}`)
       }
     })
 
@@ -135,6 +184,13 @@ export function Calendar({ workouts, onRefetch }: CalendarProps) {
     day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()
 
   const selectedWorkouts = selectedDay ? (workoutsByDay[String(selectedDay)] || []) : []
+
+  // Debug logging for selected day
+  if (selectedDay) {
+    console.log(`Selected day ${selectedDay}:`, selectedWorkouts.length, 'workouts')
+    console.log('Workout details:', selectedWorkouts.map(w => `${w.id}:W${w.week}D${w.day}:${w.exercise}:${w.lastSaved || 'unsaved'}`))
+  }
+
   const selectedDateStr = selectedDay
     ? new Date(currentYear, currentMonth, selectedDay).toLocaleDateString('en-US', {
         weekday: 'long',
