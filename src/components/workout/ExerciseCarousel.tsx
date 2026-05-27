@@ -202,6 +202,8 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   // Previous week data for reference labels
   const [previousWeekValues, setPreviousWeekValues] = useState<{
     set1?: number; set2?: number; set3?: number; set4?: number; set5?: number;
+    load?: string;
+    avgRir?: number;
   } | undefined>(undefined)
   const [prefilledFrom, setPrefilledFrom] = useState<number | null>(null)
   const [ownNoteEdited, setOwnNoteEdited] = useState(false)
@@ -253,13 +255,15 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
                w.lastSaved
         )
         if (prevWeek && (prevWeek.set1 !== undefined || prevWeek.load)) {
-          // Show previous values as reference labels, but keep form empty
+          // Show previous values as placeholders
           setPreviousWeekValues({
             set1: prevWeek.set1,
             set2: prevWeek.set2,
             set3: prevWeek.set3,
             set4: prevWeek.set4,
             set5: prevWeek.set5,
+            load: prevWeek.load,
+            avgRir: prevWeek.avgRir,
           })
           setPrefilledFrom(prevWeek.week)
         } else {
@@ -267,18 +271,16 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
           setPrefilledFrom(null)
         }
 
-        // Pre-populate ownNote, load, and avgRir from previous week if they exist
+        // Pre-populate ownNote from previous week if it exists
         const prevOwnNote = prevWeek?.ownNote || ''
-        const prevLoad = prevWeek?.load || ''
-        const prevAvgRir = prevWeek?.avgRir
-        console.log('Previous week ownNote:', prevOwnNote, 'load:', prevLoad, 'avgRir:', prevAvgRir, 'from week:', prevWeek?.week)
+        console.log('Previous week ownNote:', prevOwnNote, 'from week:', prevWeek?.week)
         setPerformanceData({
           set1: undefined, set2: undefined, set3: undefined, set4: undefined, set5: undefined,
-          load: prevLoad, avgRir: prevAvgRir, done: false, ownNote: prevOwnNote,
+          load: '', avgRir: undefined, done: false, ownNote: prevOwnNote,
         })
         setOwnNoteEdited(false) // Not edited yet, showing previous
-        setLoadEdited(false) // Not edited yet, showing previous
-        setAvgRirEdited(false) // Not edited yet, showing previous
+        setLoadEdited(false)
+        setAvgRirEdited(false)
         setHasChanges(false)
       }
     }
@@ -714,27 +716,20 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
                         <label className="text-xs font-medium text-text-tertiary">
                           Set {setNum}
                         </label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            inputMode="numeric"
-                            min="0"
-                            max="100"
-                            value={getSetValue(setNum) ?? ''}
-                            onChange={(e) => {
-                              const val = e.target.value
-                              handleSetChange(setNum, val === '' ? undefined : parseInt(val, 10))
-                            }}
-                            disabled={isReadOnly}
-                            placeholder="Reps"
-                            className="text-center"
-                          />
-                          {getPrevValue(setNum) != null && (
-                            <span className="text-xs text-accent-amber whitespace-nowrap">
-                              {getPrevValue(setNum)}
-                            </span>
-                          )}
-                        </div>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min="0"
+                          max="100"
+                          value={getSetValue(setNum) ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            handleSetChange(setNum, val === '' ? undefined : parseInt(val, 10))
+                          }}
+                          disabled={isReadOnly}
+                          placeholder={getPrevValue(setNum) != null ? `${getPrevValue(setNum)}` : "Reps"}
+                          className={getPrevValue(setNum) != null ? "text-center input-previous" : "text-center"}
+                        />
                       </div>
                     )
                   })}
@@ -749,9 +744,9 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
                         handleFieldChange('load', e.target.value)
                         setLoadEdited(true)
                       }}
-                      placeholder="e.g., 10kg"
+                      placeholder={previousWeekValues?.load || "e.g., 10kg"}
                       disabled={isReadOnly}
-                      className={!loadEdited && performanceData.load ? 'italic text-text-tertiary' : ''}
+                      className={previousWeekValues?.load ? 'input-previous' : ''}
                     />
                   </div>
 
@@ -768,9 +763,9 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
                         handleFieldChange('avgRir', e.target.value ? parseFloat(e.target.value) : undefined)
                         setAvgRirEdited(true)
                       }}
-                      placeholder="0-10"
+                      placeholder={previousWeekValues?.avgRir !== undefined ? `${previousWeekValues.avgRir}` : "0-10"}
                       disabled={isReadOnly}
-                      className={!avgRirEdited && performanceData.avgRir !== undefined ? 'text-center italic text-text-tertiary' : 'text-center'}
+                      className={previousWeekValues?.avgRir !== undefined ? 'text-center input-previous' : 'text-center'}
                     />
                   </div>
                 </div>
