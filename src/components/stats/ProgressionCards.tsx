@@ -29,13 +29,14 @@ export function ProgressionCards({
 }: ProgressionCardsProps) {
   // 1. Bodyweight with change (4 weeks ago)
   const currentBodyweight = bodyMetric?.bodyweight
-  const fourWeeksAgo = bodyMetrics
-    .filter(m => m.bodyweight && m.date && bodyMetric?.date)
+  const fourWeeksAgo = bodyMetric?.date ? bodyMetrics
+    .filter(m => m.bodyweight && m.date)
     .filter(m => {
       const daysDiff = differenceInDays(parseISO(bodyMetric.date), parseISO(m.date))
       return daysDiff >= 28
     })
     .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime())[0]
+    : null
   const bodyweightChange = currentBodyweight && fourWeeksAgo?.bodyweight
     ? currentBodyweight - fourWeeksAgo.bodyweight
     : null
