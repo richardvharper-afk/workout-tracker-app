@@ -49,17 +49,12 @@ export async function POST(request: NextRequest) {
       )
     }
     const body = await request.json()
-    const formData = body as BodyMetricFormData & { programStartDate?: string }
-
-    // Default program start date to first week of current year if not provided
-    const programStartDate = formData.programStartDate
-      ? parseISO(formData.programStartDate)
-      : new Date(new Date().getFullYear(), 0, 1) // Jan 1 of current year
+    const formData = body as BodyMetricFormData
 
     const service = new BodyMetricsService()
     await service.initialize(tokens)
 
-    const metric = await service.saveMetrics(formData, programStartDate)
+    const metric = await service.saveMetrics(formData, new Date()) // programStartDate no longer used
 
     return NextResponse.json({
       success: true,

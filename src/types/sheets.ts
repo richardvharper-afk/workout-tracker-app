@@ -70,19 +70,18 @@ export const TOTAL_COLUMNS = 26
 
 // Body Metrics sheet column indices (0-based)
 export const BODY_METRICS_COLUMNS = {
-  WEEK: 0,
-  DATE: 1,
-  BODYWEIGHT: 2,
-  WAIST: 3,
-  CHEST: 4,
-  SHOULDERS: 5,
-  LEFT_BICEP: 6,
-  RIGHT_BICEP: 7,
-  HIPS: 8,
-  NOTES: 9,
+  DATE: 0,
+  BODYWEIGHT: 1,
+  WAIST: 2,
+  CHEST: 3,
+  SHOULDERS: 4,
+  LEFT_BICEP: 5,
+  RIGHT_BICEP: 6,
+  HIPS: 7,
+  NOTES: 8,
 } as const
 
-export const BODY_METRICS_TOTAL_COLUMNS = 10
+export const BODY_METRICS_TOTAL_COLUMNS = 9
 
 // Sessions sheet column indices (0-based)
 export const SESSIONS_COLUMNS = {

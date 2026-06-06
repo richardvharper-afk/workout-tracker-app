@@ -99,7 +99,8 @@ html {
     opacity: 0.7;
   }
 
-  .input-previous::placeholder {
+  .input-previous::placeholder,
+  textarea.input-previous::placeholder {
     color: #facc15;
     font-style: normal;
     opacity: 1;

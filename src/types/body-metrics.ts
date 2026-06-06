@@ -2,7 +2,6 @@
 
 export interface BodyMetric {
   id: string // Row number in sheet
-  week: number // Program week number
   date: string // ISO date string (YYYY-MM-DD)
   bodyweight?: number // kg
   waist?: number // cm

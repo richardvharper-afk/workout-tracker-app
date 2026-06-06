@@ -62,6 +62,8 @@ export default function ProfilePage() {
       setSaving(true)
       setError(null)
 
+      console.log('Saving metrics:', metrics)
+
       const response = await fetch('/api/sheets/body-metrics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,11 +88,16 @@ export default function ProfilePage() {
     }
   }
 
+  const [rawInputs, setRawInputs] = useState<Record<string, string>>({})
+
   const handleFieldChange = (field: keyof BodyMetricFormData, value: string) => {
-    setMetrics(prev => ({
-      ...prev,
-      [field]: field === 'notes' ? value : (value ? parseFloat(value) : undefined),
-    }))
+    if (field === 'notes') {
+      setMetrics(prev => ({ ...prev, notes: value }))
+    } else {
+      setRawInputs(prev => ({ ...prev, [field]: value }))
+      const parsed = value ? parseFloat(value) : undefined
+      setMetrics(prev => ({ ...prev, [field]: !value || isNaN(parsed!) ? undefined : parsed }))
+    }
     setSaved(false)
   }
 
@@ -112,11 +119,9 @@ export default function ProfilePage() {
                 <div>
                   <Input
                     label="Body Weight (kg)"
-                    type="number"
+                    type="text"
                     inputMode="decimal"
-                    step="0.1"
-                    min="0"
-                    value={metrics.bodyweight ?? ''}
+                    value={rawInputs.bodyweight ?? (metrics.bodyweight !== undefined ? String(metrics.bodyweight) : '')}
                     onChange={e => handleFieldChange('bodyweight', e.target.value)}
                     placeholder="e.g. 82.5"
                   />
@@ -151,11 +156,9 @@ export default function ProfilePage() {
                       <div>
                         <Input
                           label="Waist (cm)"
-                          type="number"
+                          type="text"
                           inputMode="decimal"
-                          step="0.1"
-                          min="0"
-                          value={metrics.waist ?? ''}
+                          value={rawInputs.waist ?? (metrics.waist !== undefined ? String(metrics.waist) : '')}
                           onChange={e => handleFieldChange('waist', e.target.value)}
                           placeholder="e.g. 85"
                         />
@@ -169,11 +172,9 @@ export default function ProfilePage() {
                       <div>
                         <Input
                           label="Chest (cm)"
-                          type="number"
+                          type="text"
                           inputMode="decimal"
-                          step="0.1"
-                          min="0"
-                          value={metrics.chest ?? ''}
+                          value={rawInputs.chest ?? (metrics.chest !== undefined ? String(metrics.chest) : '')}
                           onChange={e => handleFieldChange('chest', e.target.value)}
                           placeholder="e.g. 102"
                         />
@@ -187,11 +188,9 @@ export default function ProfilePage() {
                       <div>
                         <Input
                           label="Shoulders (cm)"
-                          type="number"
+                          type="text"
                           inputMode="decimal"
-                          step="0.1"
-                          min="0"
-                          value={metrics.shoulders ?? ''}
+                          value={rawInputs.shoulders ?? (metrics.shoulders !== undefined ? String(metrics.shoulders) : '')}
                           onChange={e => handleFieldChange('shoulders', e.target.value)}
                           placeholder="e.g. 115"
                         />
@@ -205,11 +204,9 @@ export default function ProfilePage() {
                       <div>
                         <Input
                           label="Left Bicep (cm)"
-                          type="number"
+                          type="text"
                           inputMode="decimal"
-                          step="0.1"
-                          min="0"
-                          value={metrics.leftBicep ?? ''}
+                          value={rawInputs.leftBicep ?? (metrics.leftBicep !== undefined ? String(metrics.leftBicep) : '')}
                           onChange={e => handleFieldChange('leftBicep', e.target.value)}
                           placeholder="e.g. 38"
                         />
@@ -223,11 +220,9 @@ export default function ProfilePage() {
                       <div>
                         <Input
                           label="Right Bicep (cm)"
-                          type="number"
+                          type="text"
                           inputMode="decimal"
-                          step="0.1"
-                          min="0"
-                          value={metrics.rightBicep ?? ''}
+                          value={rawInputs.rightBicep ?? (metrics.rightBicep !== undefined ? String(metrics.rightBicep) : '')}
                           onChange={e => handleFieldChange('rightBicep', e.target.value)}
                           placeholder="e.g. 38.5"
                         />
@@ -241,11 +236,9 @@ export default function ProfilePage() {
                       <div>
                         <Input
                           label="Hips (cm)"
-                          type="number"
+                          type="text"
                           inputMode="decimal"
-                          step="0.1"
-                          min="0"
-                          value={metrics.hips ?? ''}
+                          value={rawInputs.hips ?? (metrics.hips !== undefined ? String(metrics.hips) : '')}
                           onChange={e => handleFieldChange('hips', e.target.value)}
                           placeholder="e.g. 98"
                         />

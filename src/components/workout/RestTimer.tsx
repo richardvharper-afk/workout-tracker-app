@@ -80,8 +80,9 @@ interface TimerState {
 }
 
 export function RestTimer({ restString, onComplete, onSkip }: RestTimerProps) {
-  const totalSeconds = parseRestSeconds(restString)
-  const [remaining, setRemaining] = useState(totalSeconds)
+  const propsSeconds = parseRestSeconds(restString)
+  const [totalSeconds, setTotalSeconds] = useState(propsSeconds)
+  const [remaining, setRemaining] = useState(propsSeconds)
   const [paused, setPaused] = useState(false)
   const [completed, setCompleted] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -96,9 +97,9 @@ export function RestTimer({ restString, onComplete, onSkip }: RestTimerProps) {
       try {
         const state: TimerState = JSON.parse(stored)
 
-        // Resume existing timer regardless of duration
-        // This allows timer to persist when switching between exercises
+        // Resume existing timer - use stored duration, not props
         timerIdRef.current = state.timerId
+        setTotalSeconds(state.duration) // Use the stored duration
 
         if (state.pausedAt) {
           // Timer was paused

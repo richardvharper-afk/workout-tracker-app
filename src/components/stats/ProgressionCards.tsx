@@ -6,6 +6,7 @@ import { Session } from '@/types/session'
 import { BodyMetric } from '@/types/body-metrics'
 import { StatCard } from './StatCard'
 import { ExerciseProgression } from '@/lib/metrics/progression'
+import { parseISO, differenceInDays } from 'date-fns'
 
 interface ProgressionCardsProps {
   workouts: Workout[]
@@ -29,8 +30,12 @@ export function ProgressionCards({
   // 1. Bodyweight with change (4 weeks ago)
   const currentBodyweight = bodyMetric?.bodyweight
   const fourWeeksAgo = bodyMetrics
-    .filter(m => m.bodyweight && m.week && bodyMetric?.week && m.week <= bodyMetric.week - 4)
-    .sort((a, b) => b.week! - a.week!)[0]
+    .filter(m => m.bodyweight && m.date && bodyMetric?.date)
+    .filter(m => {
+      const daysDiff = differenceInDays(parseISO(bodyMetric.date), parseISO(m.date))
+      return daysDiff >= 28
+    })
+    .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime())[0]
   const bodyweightChange = currentBodyweight && fourWeeksAgo?.bodyweight
     ? currentBodyweight - fourWeeksAgo.bodyweight
     : null

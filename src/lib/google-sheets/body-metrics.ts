@@ -27,7 +27,6 @@ function mapRowToBodyMetric(row: any[], rowIndex: number): BodyMetric {
 
   const metric = {
     id: rowIndex.toString(),
-    week: parseOptionalNumber(row[BODY_METRICS_COLUMNS.WEEK]) || 0,
     date: getString(row[BODY_METRICS_COLUMNS.DATE]),
     bodyweight: parseOptionalNumber(row[BODY_METRICS_COLUMNS.BODYWEIGHT]),
     waist: parseOptionalNumber(row[BODY_METRICS_COLUMNS.WAIST]),
@@ -47,13 +46,12 @@ function mapRowToBodyMetric(row: any[], rowIndex: number): BodyMetric {
  * Convert a BodyMetric object to a sheet row
  */
 function mapBodyMetricToRow(metric: BodyMetric): any[] {
-  const row = new Array(10).fill('')
+  const row = new Array(9).fill('')
 
   const formatOptional = (value: any): string => {
     return value !== undefined && value !== null ? String(value) : ''
   }
 
-  row[BODY_METRICS_COLUMNS.WEEK] = metric.week
   row[BODY_METRICS_COLUMNS.DATE] = metric.date
   row[BODY_METRICS_COLUMNS.BODYWEIGHT] = formatOptional(metric.bodyweight)
   row[BODY_METRICS_COLUMNS.WAIST] = formatOptional(metric.waist)
@@ -67,13 +65,6 @@ function mapBodyMetricToRow(metric: BodyMetric): any[] {
   return row
 }
 
-/**
- * Calculate week number based on date and program start date
- */
-function calculateWeekNumber(date: Date, programStartDate: Date): number {
-  const weeksDiff = differenceInWeeks(date, programStartDate)
-  return weeksDiff + 1 // Week 1 starts at program start
-}
 
 export class BodyMetricsService {
   private client: GoogleSheetsClient
@@ -159,14 +150,15 @@ export class BodyMetricsService {
   ): Promise<BodyMetric> {
     const today = new Date()
     const dateString = format(today, 'yyyy-MM-dd')
-    const weekNumber = calculateWeekNumber(today, programStartDate)
+
+    console.log('saveMetrics - today:', dateString, 'formData:', formData)
 
     // Check if entry exists for today
     const existing = await this.findEntryForDate(today)
+    console.log('saveMetrics - existing entry:', existing)
 
     const metric: BodyMetric = {
       id: existing?.id || '',
-      week: weekNumber,
       date: dateString,
       bodyweight: formData.bodyweight,
       waist: formData.waist,
@@ -181,14 +173,23 @@ export class BodyMetricsService {
 
     if (existing) {
       // Update existing row
-      await this.client.updateRow(parseInt(existing.id), row)
+      console.log('saveMetrics - updating existing row:', existing.id)
+      await this.client.updateRow(parseInt(existing.id), row, SHEET_NAME)
       metric.id = existing.id
     } else {
-      // Append new row
-      const newRowIndex = await this.client.appendRow(row)
+      // Find first empty row (after existing data)
+      const allMetrics = await this.getAllMetrics()
+      const maxId = allMetrics.length > 0
+        ? Math.max(...allMetrics.map(m => parseInt(m.id) || 0))
+        : 1 // Header is row 1, so first data row is 2
+      const newRowIndex = maxId + 1
+
+      console.log('saveMetrics - inserting at row:', newRowIndex)
+      await this.client.updateRow(newRowIndex, row, SHEET_NAME)
       metric.id = newRowIndex.toString()
     }
 
+    console.log('saveMetrics - returning metric:', metric)
     return metric
   }
 }

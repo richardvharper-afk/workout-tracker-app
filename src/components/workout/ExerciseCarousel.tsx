@@ -204,6 +204,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
     set1?: number; set2?: number; set3?: number; set4?: number; set5?: number;
     load?: string;
     avgRir?: number;
+    ownNote?: string;
   } | undefined>(undefined)
   const [prefilledFrom, setPrefilledFrom] = useState<number | null>(null)
   const [ownNoteEdited, setOwnNoteEdited] = useState(false)
@@ -242,11 +243,38 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
           ownNote: currentExercise.ownNote || '',
         })
         setHasChanges(false)
-        setPrefilledFrom(null)
-        setPreviousWeekValues(undefined)
-        setOwnNoteEdited(true) // Already has own note, so it's "edited"
-        setLoadEdited(true) // Already has load
-        setAvgRirEdited(true) // Already has avgRir
+        setOwnNoteEdited(!!currentExercise.ownNote)
+        setLoadEdited(!!currentExercise.load)
+        setAvgRirEdited(currentExercise.avgRir !== undefined)
+
+        // Only clear previous values if exercise is marked DONE
+        if (currentExercise.done) {
+          setPrefilledFrom(null)
+          setPreviousWeekValues(undefined)
+        } else {
+          // Exercise has partial data but not done - still show previous week values as reference
+          const prevWeek = workouts.find(
+            w => w.week === currentExercise.week - 1 &&
+                 w.exercise === currentExercise.exercise &&
+                 w.lastSaved
+          )
+          if (prevWeek && (prevWeek.set1 !== undefined || prevWeek.load)) {
+            setPreviousWeekValues({
+              set1: prevWeek.set1,
+              set2: prevWeek.set2,
+              set3: prevWeek.set3,
+              set4: prevWeek.set4,
+              set5: prevWeek.set5,
+              load: prevWeek.load,
+              avgRir: prevWeek.avgRir,
+              ownNote: prevWeek.ownNote,
+            })
+            setPrefilledFrom(prevWeek.week)
+          } else {
+            setPreviousWeekValues(undefined)
+            setPrefilledFrom(null)
+          }
+        }
       } else {
         // Look up previous week data for reference
         const prevWeek = workouts.find(
@@ -264,6 +292,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
             set5: prevWeek.set5,
             load: prevWeek.load,
             avgRir: prevWeek.avgRir,
+            ownNote: prevWeek.ownNote,
           })
           setPrefilledFrom(prevWeek.week)
         } else {
@@ -271,14 +300,11 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
           setPrefilledFrom(null)
         }
 
-        // Pre-populate ownNote from previous week if it exists
-        const prevOwnNote = prevWeek?.ownNote || ''
-        console.log('Previous week ownNote:', prevOwnNote, 'from week:', prevWeek?.week)
         setPerformanceData({
           set1: undefined, set2: undefined, set3: undefined, set4: undefined, set5: undefined,
-          load: '', avgRir: undefined, done: false, ownNote: prevOwnNote,
+          load: '', avgRir: undefined, done: false, ownNote: '',
         })
-        setOwnNoteEdited(false) // Not edited yet, showing previous
+        setOwnNoteEdited(false)
         setLoadEdited(false)
         setAvgRirEdited(false)
         setHasChanges(false)
@@ -746,7 +772,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
                       }}
                       placeholder={previousWeekValues?.load || "e.g., 10kg"}
                       disabled={isReadOnly}
-                      className={previousWeekValues?.load ? 'input-previous' : ''}
+                      className={`text-center ${previousWeekValues?.load ? 'input-previous' : ''}`}
                     />
                   </div>
 
@@ -795,8 +821,8 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
                       value={performanceData.ownNote}
                       onChange={(e) => handleFieldChange('ownNote', e.target.value)}
                       rows={3}
-                      className={`input ${!ownNoteEdited && performanceData.ownNote ? 'italic text-text-tertiary' : ''}`}
-                      placeholder="Your personal notes for this session"
+                      className={`input ${previousWeekValues?.ownNote && !performanceData.ownNote ? 'input-previous' : ''}`}
+                      placeholder={previousWeekValues?.ownNote || "Your personal notes for this session"}
                       disabled={isReadOnly}
                     />
                   </div>
