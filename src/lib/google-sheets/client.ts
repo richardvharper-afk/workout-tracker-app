@@ -98,7 +98,7 @@ export class GoogleSheetsClient {
         return await this.sheets!.spreadsheets.values.update({
           spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
           range,
-          valueInputOption: 'USER_ENTERED',
+          valueInputOption: 'RAW',
           requestBody: {
             values: [values],
           },
@@ -126,7 +126,7 @@ export class GoogleSheetsClient {
         return await this.sheets!.spreadsheets.values.append({
           spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
           range,
-          valueInputOption: 'USER_ENTERED',
+          valueInputOption: 'RAW',
           requestBody: {
             values: [values],
           },
