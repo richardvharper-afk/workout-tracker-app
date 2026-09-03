@@ -58,6 +58,11 @@ export function Calendar({ workouts, onRefetch }: CalendarProps) {
       week1Monday.setDate(savedDate.getDate() - totalOffset)
     }
 
+    // Records the calendar day claimed by each session (week+day) in this month.
+    // Used to co-locate unsaved siblings with their saved exercises, and to
+    // prevent fully-unsaved future sessions from colliding with saved sessions.
+    const sessionToDay: Record<string, number> = {}
+
     // First pass: place saved workouts by their actual save date only.
     // Saved workouts never appear in the second pass, so a workout saved in
     // a different month won't leak into the current month via schedule calc.
@@ -67,27 +72,53 @@ export function Calendar({ workouts, onRefetch }: CalendarProps) {
       if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
         const dayNum = date.getDate()
         const key = String(dayNum)
+        const sessionKey = `${w.week}-${w.day}`
         if (!map[key]) map[key] = []
         map[key].push(w)
+        // Record the first (earliest) day seen for this session
+        if (sessionToDay[sessionKey] === undefined) {
+          sessionToDay[sessionKey] = dayNum
+        }
       }
     })
 
-    // Second pass: place unsaved workouts via Mon/Wed/Fri schedule.
-    // Account for rest week after W12 (gap week of May 4-10, 2026).
+    // Second pass: place unsaved workouts.
+    // - If the session has saved siblings this month: co-locate on that day.
+    // - If the session is fully unsaved: use Mon/Wed/Fri schedule, but only
+    //   if the calculated date isn't already claimed by a different session
+    //   (prevents schedule drift from doubling a past session with a future one).
     workouts.forEach(w => {
       if (w.lastSaved) return // saved workouts are handled by first pass only
 
-      if (week1Monday && DAY_OFFSETS[w.day] !== undefined) {
+      const sessionKey = `${w.week}-${w.day}`
+      let dayNum: number | null = null
+
+      if (sessionToDay[sessionKey] !== undefined) {
+        // Co-locate with saved siblings in current month
+        dayNum = sessionToDay[sessionKey]
+      } else if (week1Monday && DAY_OFFSETS[w.day] !== undefined) {
+        // Fully unsaved session: use schedule, but guard against date conflicts
         const restWeekOffset = w.week > 12 ? 7 : 0
         const totalOffset = (w.week - 1) * 7 + DAY_OFFSETS[w.day] + restWeekOffset
         const date = new Date(week1Monday)
         date.setDate(week1Monday.getDate() + totalOffset)
         if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-          const dayNum = date.getDate()
-          const key = String(dayNum)
-          if (!map[key]) map[key] = []
-          map[key].push(w)
+          const candidateDayNum = date.getDate()
+          const candidateKey = String(candidateDayNum)
+          // Only claim this date if it isn't already taken by a saved session
+          if (!map[candidateKey]) {
+            dayNum = candidateDayNum
+            sessionToDay[sessionKey] = candidateDayNum
+          } else if (sessionToDay[sessionKey] !== undefined) {
+            dayNum = sessionToDay[sessionKey]
+          }
         }
+      }
+
+      if (dayNum !== null) {
+        const key = String(dayNum)
+        if (!map[key]) map[key] = []
+        map[key].push(w)
       }
     })
 
