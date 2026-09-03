@@ -214,7 +214,7 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, allWorkouts, o
                         {workout.exercise}
                       </p>
                       <p className="text-xs text-text-tertiary">
-                        {workout.sets}×{workout.reps} · {workout.section}
+                        {workout.sets}×{workout.reps} · {workout.section} · <span className="text-accent-amber">W{workout.week}D{workout.day}</span>
                       </p>
                       {workout.lastSaved && (
                         <div className="flex flex-wrap gap-x-2 mt-1">
