@@ -38,14 +38,6 @@ interface DayDetailModalProps {
   onRefetch?: () => void
 }
 
-function buildEmptyPerformanceData(): WorkoutPerformanceData {
-  return {
-    done: false,
-    notes: '',
-    load: '',
-  }
-}
-
 export function DayDetailModal({ isOpen, onClose, date, workouts, allWorkouts, onRefetch }: DayDetailModalProps) {
   const [selectedExercise, setSelectedExercise] = useState<Workout | null>(null)
   const [performanceData, setPerformanceData] = useState<WorkoutPerformanceData>({
@@ -66,7 +58,7 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, allWorkouts, o
   const totalSets = workouts.reduce((sum, w) => sum + w.sets, 0)
   const totalReps = workouts.reduce((sum, w) => {
     const reps = w.reps.includes('-')
-      ? Math.round((parseInt(w.reps.split('-')[0]) + parseInt(w.reps.split('-')[1])) / 2)
+      ? Math.round((parseInt(w.reps.split('-')[0]) + parseInt(w.reps.split('-')[1])) / 2) || 0
       : parseInt(w.reps) || 0
     return sum + reps * w.sets
   }, 0)

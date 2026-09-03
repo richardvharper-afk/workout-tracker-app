@@ -41,14 +41,9 @@ export default function ProfilePage() {
       const response = await fetch('/api/sheets/body-metrics/latest')
       const data = await response.json()
 
-      console.log('Body metrics API response:', data)
-
       if (data.success && data.data) {
-        console.log('Previous metrics:', data.data)
         setPreviousMetrics(data.data)
         // Don't pre-fill form - user enters new values
-      } else {
-        console.log('No previous metrics found or API error:', data.error)
       }
     } catch (err: any) {
       console.error('Failed to fetch latest metrics:', err)
@@ -61,8 +56,6 @@ export default function ProfilePage() {
     try {
       setSaving(true)
       setError(null)
-
-      console.log('Saving metrics:', metrics)
 
       const response = await fetch('/api/sheets/body-metrics', {
         method: 'POST',
