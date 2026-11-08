@@ -1,10 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Workout } from '@/types/workout'
 import { Session } from '@/types/session'
 import { BodyMetric } from '@/types/body-metrics'
 import { MuscleHeatmap } from './MuscleHeatmap'
+import { MuscleLoadProgressionChart } from './MuscleLoadProgressionChart'
+import { BodyweightTrendChart } from './BodyweightTrendChart'
 import { ProgressionCards } from './ProgressionCards'
 import { Card } from '@/components/ui/Card'
 import { SessionLoadChart } from '@/components/metrics/SessionLoadChart'
@@ -12,7 +14,8 @@ import { WeeklyVolumeChart } from '@/components/metrics/WeeklyVolumeChart'
 import { CalorieEfficiencyChart } from '@/components/metrics/CalorieEfficiencyChart'
 import { ProgressionChart } from '@/components/metrics/ProgressionChart'
 import { calculateAllSessionLoads, calculateRollingAverage, calculateSessionLoadTrend } from '@/lib/metrics/session-load'
-import { calculateWeeklyVolume, DEFAULT_GOAL_MUSCLES } from '@/lib/metrics/weekly-volume'
+import { calculateWeeklyVolume, DEFAULT_GOAL_MUSCLES, PRIORITY_MUSCLES } from '@/lib/metrics/weekly-volume'
+import { calculateMuscleLoadProgression } from '@/lib/metrics/muscle-progression'
 import { getAnchorLifts } from '@/lib/metrics/progression'
 
 interface StatsOverviewProps {
@@ -35,24 +38,26 @@ export function StatsOverview({ workouts: allWorkouts, sessions, bodyMetric, bod
   // State for anchor lift selection
   const [selectedAnchorLift, setSelectedAnchorLift] = useState<string | null>(null)
 
-  // Auto-select first anchor lift if none selected
-  if (anchorLifts.length > 0 && !selectedAnchorLift) {
-    setSelectedAnchorLift(anchorLifts[0].exercise)
-  }
+  // Default to the first anchor lift until the user picks one
+  const effectiveAnchorLift = selectedAnchorLift ?? anchorLifts[0]?.exercise ?? null
+  const selectedProgression = anchorLifts.find(lift => lift.exercise === effectiveAnchorLift)
 
-  const selectedProgression = anchorLifts.find(lift => lift.exercise === selectedAnchorLift)
+  // Per-priority-muscle load progression (feeds the summary cards)
+  const priorityProgressions = useMemo(
+    () => PRIORITY_MUSCLES.map(m => calculateMuscleLoadProgression(workouts, m, bodyMetric?.bodyweight)),
+    [workouts, bodyMetric?.bodyweight]
+  )
 
   return (
     <div className="space-y-4">
       {/* Progression Cards */}
       <ProgressionCards
-        workouts={workouts}
         sessions={sessions}
         bodyMetric={bodyMetric}
         bodyMetrics={bodyMetrics}
         sessionLoadData={sessionLoadData}
         weeklyVolumeData={weeklyVolumeData}
-        anchorLifts={anchorLifts}
+        priorityProgressions={priorityProgressions}
       />
 
       {/* Weekly Training Load */}
@@ -78,38 +83,49 @@ export function StatsOverview({ workouts: allWorkouts, sessions, bodyMetric, bod
         <SessionLoadChart data={sessionLoadWithAvg} />
       </Card>
 
-      {/* Weekly Volume by Muscle */}
+      {/* Muscle Volume (priority muscles) + heatmap */}
       <Card padding="lg">
         <div className="mb-4">
-          <h2 className="text-lg font-bold text-text-primary">Weekly Volume by Muscle</h2>
-          <p className="text-sm text-text-tertiary">Working sets (Strength + Core exercises marked Done)</p>
+          <h2 className="text-lg font-bold text-text-primary">Muscle Volume</h2>
+          <p className="text-sm text-text-tertiary">
+            Working sets per week. Targets apply to priority muscles: chest, shoulders, back, biceps
+          </p>
         </div>
         <WeeklyVolumeChart data={weeklyVolumeData} />
-      </Card>
-
-      {/* Calorie Efficiency */}
-      <Card padding="lg">
-        <div className="mb-4">
-          <h2 className="text-lg font-bold text-text-primary">Calorie Efficiency</h2>
-          <p className="text-sm text-text-tertiary">Session intensity: calories burned per minute</p>
+        <div className="mt-6 pt-4 border-t border-glass-border">
+          <h3 className="text-sm font-semibold text-text-primary mb-3">Muscle Heatmap</h3>
+          <MuscleHeatmap workouts={workouts} bare />
         </div>
-        <CalorieEfficiencyChart sessions={sessions} />
       </Card>
 
-      {/* Muscle heatmap */}
-      <MuscleHeatmap workouts={workouts} />
-
-      {/* Anchor Lift Progression */}
+      {/* Muscle Load Progression */}
       <Card padding="lg">
         <div className="mb-4">
-          <h2 className="text-lg font-bold text-text-primary">Anchor Lift Progression</h2>
+          <h2 className="text-lg font-bold text-text-primary">Muscle Load Progression</h2>
+          <p className="text-sm text-text-tertiary">Are your priority muscles getting stronger?</p>
+        </div>
+        <MuscleLoadProgressionChart workouts={workouts} bodyweightKg={bodyMetric?.bodyweight} />
+      </Card>
+
+      {/* Bodyweight Trend */}
+      <Card padding="lg">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-text-primary">Bodyweight Trend</h2>
+        </div>
+        <BodyweightTrendChart bodyMetrics={bodyMetrics} />
+      </Card>
+
+      {/* Exercise Progression */}
+      <Card padding="lg">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-text-primary">Exercise Progression</h2>
           <p className="text-sm text-text-tertiary mb-3">
             Strength & Core exercises appearing in 8+ weeks ({anchorLifts.length} found)
           </p>
 
           {anchorLifts.length > 0 && (
             <select
-              value={selectedAnchorLift || ''}
+              value={effectiveAnchorLift || ''}
               onChange={(e) => setSelectedAnchorLift(e.target.value)}
               className="w-full px-3 py-2 bg-glass-bg border border-glass-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-cyan"
             >
@@ -129,6 +145,14 @@ export function StatsOverview({ workouts: allWorkouts, sessions, bodyMetric, bod
         ) : selectedProgression ? (
           <ProgressionChart progression={selectedProgression} />
         ) : null}
+      </Card>
+      {/* Calorie Efficiency */}
+      <Card padding="lg">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-text-primary">Calorie Efficiency</h2>
+          <p className="text-sm text-text-tertiary">Session intensity: calories burned per minute</p>
+        </div>
+        <CalorieEfficiencyChart sessions={sessions} />
       </Card>
     </div>
   )

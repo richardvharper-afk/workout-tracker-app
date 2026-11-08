@@ -6,6 +6,8 @@ import { normalizeMuscle } from '@/lib/utils/muscles'
 
 interface MuscleHeatmapProps {
   workouts: Workout[]
+  /** Render without its own card/title (when embedded in another section) */
+  bare?: boolean
 }
 
 function getSets(w: Workout): number {
@@ -141,7 +143,7 @@ const MUSCLE_PATHS: Record<string, { paths: string[]; label: string; labelPos: [
   },
 }
 
-export function MuscleHeatmap({ workouts }: MuscleHeatmapProps) {
+export function MuscleHeatmap({ workouts, bare = false }: MuscleHeatmapProps) {
   const { muscleVolumes, weekCount } = useMemo(() => {
     const volumes = new Map<string, number>()
     const weeks = new Set<number>()
@@ -169,8 +171,8 @@ export function MuscleHeatmap({ workouts }: MuscleHeatmapProps) {
 
   if (muscleVolumes.size === 0) {
     return (
-      <div className="glass-card p-6">
-        <h3 className="text-sm font-semibold text-text-primary mb-4">Muscle Heatmap</h3>
+      <div className={bare ? '' : 'glass-card p-6'}>
+        {!bare && <h3 className="text-sm font-semibold text-text-primary mb-4">Muscle Heatmap</h3>}
         <p className="text-text-tertiary text-sm text-center py-8">
           Save workouts with muscle group data to see the heatmap
         </p>
@@ -179,8 +181,8 @@ export function MuscleHeatmap({ workouts }: MuscleHeatmapProps) {
   }
 
   return (
-    <div className="glass-card p-4">
-      <h3 className="text-sm font-semibold text-text-primary mb-3">Muscle Heatmap</h3>
+    <div className={bare ? '' : 'glass-card p-4'}>
+      {!bare && <h3 className="text-sm font-semibold text-text-primary mb-3">Muscle Heatmap</h3>}
 
       <div className="flex gap-4">
         {/* SVG Body */}

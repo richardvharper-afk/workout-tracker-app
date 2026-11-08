@@ -32,7 +32,8 @@ export function parseLoad(
     return null
   }
 
-  const cleaned = loadText.trim().toLowerCase()
+  // Normalise comma decimals (en-ZA keyboards): "22,5kg" -> "22.5kg"
+  const cleaned = loadText.trim().toLowerCase().replace(/(\d),(\d)/g, '$1.$2')
 
   // Pattern 1: Band entries - cannot quantify
   if (cleaned.includes('band')) {

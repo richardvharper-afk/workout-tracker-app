@@ -14,19 +14,11 @@ export interface WeeklyVolume {
   muscles: MuscleVolume[]
 }
 
-// Default goal muscles - using normalized groups from muscle heatmap
-export const DEFAULT_GOAL_MUSCLES = [
-  'chest',
-  'shoulders',
-  'back',
-  'biceps',
-  'triceps',
-  'core',
-  'quads',
-  'hamstrings',
-  'glutes',
-  'calves',
-]
+// Priority muscles - the only ones that get volume threshold colouring.
+// Other muscles are still tracked but shown neutral.
+export const PRIORITY_MUSCLES = ['chest', 'shoulders', 'back', 'biceps']
+
+export const DEFAULT_GOAL_MUSCLES = PRIORITY_MUSCLES
 
 /**
  * Check if exercise is a working set
