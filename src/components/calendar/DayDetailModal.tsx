@@ -8,6 +8,9 @@ import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Button } from '@/components/ui/Button'
 import { useUpdateWorkout, useDeleteWorkout } from '@/lib/hooks/useWorkouts'
+import { SessionEditor } from './SessionEditor'
+import { parseDecimal } from '@/lib/utils/number'
+import { parseSheetDate, toDateInputValue, applyDateToTimestamp } from '@/lib/utils/dates'
 
 function isValidUrl(url: string): boolean {
   if (!url) return true
@@ -47,21 +50,37 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, allWorkouts, o
   const [videoUrlError, setVideoUrlError] = useState('')
   const [showSaveConfirm, setShowSaveConfirm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [exerciseDate, setExerciseDate] = useState('') // yyyy-MM-dd, '' = no saved date
+  const [actionError, setActionError] = useState('')
 
-  const { updateWorkout, loading: saveLoading } = useUpdateWorkout()
-  const { deleteWorkout, loading: deleteLoading } = useDeleteWorkout()
+  const { updateWorkout, loading: saveLoading, error: saveError } = useUpdateWorkout()
+  const { deleteWorkout, loading: deleteLoading, error: deleteError } = useDeleteWorkout()
 
   const completed = workouts.filter(w => w.done).length
   const total = workouts.length
   const progress = total > 0 ? (completed / total) * 100 : 0
 
   const totalSets = workouts.reduce((sum, w) => sum + w.sets, 0)
+  // Actual reps for saved exercises; planned reps (numeric only, so "30s" planks don't count) otherwise
   const totalReps = workouts.reduce((sum, w) => {
-    const reps = w.reps.includes('-')
+    const actual = [w.set1, w.set2, w.set3, w.set4, w.set5]
+      .filter((r): r is number => r !== undefined && r !== null)
+    if (w.lastSaved && actual.length > 0) return sum + actual.reduce((a, b) => a + b, 0)
+    if (/[a-z]/i.test(w.reps)) return sum
+    const planned = w.reps.includes('-')
       ? Math.round((parseInt(w.reps.split('-')[0]) + parseInt(w.reps.split('-')[1])) / 2) || 0
       : parseInt(w.reps) || 0
-    return sum + reps * w.sets
+    return sum + planned * w.sets
   }, 0)
+
+  // Group the day's exercises by session (week + day) for the session editors
+  const sessions = Array.from(
+    workouts.reduce((map, w) => {
+      const key = `${w.week}-${w.day}`
+      map.set(key, [...(map.get(key) || []), w])
+      return map
+    }, new Map<string, Workout[]>())
+  ).map(([key, items]) => ({ key, week: items[0].week, day: items[0].day, items }))
 
   // Reset selected exercise when modal closes
   useEffect(() => {
@@ -77,7 +96,7 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, allWorkouts, o
     // Populate with existing values if already saved
     setPerformanceData({
       done: workout.done || false,
-      notes: workout.notes || '',
+      ownNote: workout.ownNote || '',
       load: workout.load || '',
       avgRir: workout.avgRir,
       set1: workout.set1,
@@ -91,6 +110,9 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, allWorkouts, o
     const match = source.find(w => w.exercise === workout.exercise && w.videoUrl)
     setVideoUrl(match?.videoUrl || workout.videoUrl || '')
     setVideoUrlError('')
+    setActionError('')
+    const saved = parseSheetDate(workout.lastSaved)
+    setExerciseDate(saved ? toDateInputValue(saved) : '')
   }
 
   const handleBackToList = () => {
@@ -106,24 +128,49 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, allWorkouts, o
 
   const handleSave = async () => {
     if (!selectedExercise) return
-    const result = await updateWorkout(selectedExercise.id, {
-      ...performanceData,
-      videoUrl: videoUrl || undefined
-    })
+    setActionError('')
+
+    // Only send a new timestamp when the date was explicitly changed
+    const originalDate = (() => {
+      const d = parseSheetDate(selectedExercise.lastSaved)
+      return d ? toDateInputValue(d) : ''
+    })()
+    const dateOverride =
+      exerciseDate && exerciseDate !== originalDate
+        ? { lastSaved: applyDateToTimestamp(selectedExercise.lastSaved, exerciseDate) }
+        : {}
+
+    const result = await updateWorkout(
+      selectedExercise.id,
+      { ...performanceData, ...dateOverride, videoUrl: videoUrl || undefined },
+      { week: selectedExercise.week, day: selectedExercise.day, exercise: selectedExercise.exercise }
+    )
     setShowSaveConfirm(false)
     if (result) {
       onRefetch?.()
       setSelectedExercise(null)
+    } else {
+      // Most likely the row changed in the sheet (409): reload so the list is current
+      setActionError(saveError || 'Could not save. Refresh and try again.')
+      onRefetch?.()
     }
   }
 
   const handleDelete = async () => {
     if (!selectedExercise) return
-    const success = await deleteWorkout(selectedExercise.id)
+    setActionError('')
+    const success = await deleteWorkout(selectedExercise.id, {
+      week: selectedExercise.week,
+      day: selectedExercise.day,
+      exercise: selectedExercise.exercise,
+    })
     setShowDeleteConfirm(false)
     if (success) {
       onRefetch?.()
       setSelectedExercise(null)
+    } else {
+      setActionError(deleteError || 'Could not delete. Refresh and try again.')
+      onRefetch?.()
     }
   }
 
@@ -153,6 +200,9 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, allWorkouts, o
                 setShowSaveConfirm(true)
               }}
               onDelete={() => setShowDeleteConfirm(true)}
+              exerciseDate={exerciseDate}
+              setExerciseDate={setExerciseDate}
+              actionError={actionError}
               saveLoading={saveLoading}
               deleteLoading={deleteLoading}
             />
@@ -188,6 +238,17 @@ export function DayDetailModal({ isOpen, onClose, date, workouts, allWorkouts, o
                   <p className="text-xs text-text-tertiary">Done</p>
                 </div>
               </div>
+
+              {/* Session details: date / duration / calories / RPE */}
+              {sessions.map(sess => (
+                <SessionEditor
+                  key={sess.key}
+                  week={sess.week}
+                  day={sess.day}
+                  workouts={sess.items}
+                  onSaved={onRefetch}
+                />
+              ))}
 
               {/* Exercise list */}
               <div className="space-y-2">
@@ -297,6 +358,9 @@ interface EditViewProps {
   onSetChange: (setNumber: number, value: number | undefined) => void
   onSave: () => void
   onDelete: () => void
+  exerciseDate: string
+  setExerciseDate: (v: string) => void
+  actionError: string
   saveLoading: boolean
   deleteLoading: boolean
 }
@@ -313,10 +377,17 @@ function EditView({
   onSetChange,
   onSave,
   onDelete,
+  exerciseDate,
+  setExerciseDate,
+  actionError,
   saveLoading,
   deleteLoading,
 }: EditViewProps) {
   const colorClass = typeColors[workout.type] || 'bg-glass-bg text-text-tertiary'
+  // Keep the raw text so "1," / "1." can be typed without being reformatted
+  const [rirText, setRirText] = useState(
+    performanceData.avgRir !== undefined ? String(performanceData.avgRir) : ''
+  )
 
   return (
     <div className="space-y-4">
@@ -390,28 +461,36 @@ function EditView({
 
         <Input
           label="Avg RIR"
-          type="number"
-          inputMode="numeric"
-          min="0"
-          max="10"
-          value={performanceData.avgRir ?? ''}
+          type="text"
+          inputMode="decimal"
+          value={rirText}
           onChange={e => {
             const val = e.target.value
-            setPerformanceData(prev => ({
-              ...prev,
-              avgRir: val === '' ? undefined : parseInt(val, 10),
-            }))
+            setRirText(val)
+            setPerformanceData(prev => ({ ...prev, avgRir: parseDecimal(val) }))
           }}
           placeholder="0-10"
         />
 
         <Input
-          label="Notes"
-          value={performanceData.notes || ''}
+          label="My notes"
+          value={performanceData.ownNote || ''}
           onChange={e =>
-            setPerformanceData(prev => ({ ...prev, notes: e.target.value }))
+            setPerformanceData(prev => ({ ...prev, ownNote: e.target.value }))
           }
-          placeholder="Session notes..."
+          placeholder="Your notes for this exercise..."
+        />
+
+        <Input
+          label="Date"
+          type="date"
+          value={exerciseDate}
+          onChange={e => setExerciseDate(e.target.value)}
+          helperText={
+            workout.lastSaved
+              ? 'Change only to move this exercise to another day'
+              : 'Set when it was done. Left blank, it is dated when marked complete'
+          }
         />
 
         <div>
@@ -454,6 +533,8 @@ function EditView({
           }
         />
       </div>
+
+      {actionError && <p className="text-sm text-accent-pink">{actionError}</p>}
 
       {/* Action buttons */}
       <div className="flex gap-3 pt-2">

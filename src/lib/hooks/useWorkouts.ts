@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react'
 import { Workout, WorkoutFilters, WorkoutFormData, WorkoutPerformanceData } from '@/types/workout'
 
+/** Identifies the row a caller believes it is editing; the server rejects the write if the row changed. */
+export type WorkoutIdentity = Pick<Workout, 'week' | 'day' | 'exercise'>
+
 export function useWorkouts(filters?: WorkoutFilters) {
   const [workouts, setWorkouts] = useState<Workout[]>([])
   const [loading, setLoading] = useState(true)
@@ -132,7 +135,8 @@ export function useUpdateWorkout() {
 
   const updateWorkout = async (
     id: string,
-    data: Partial<Workout> | WorkoutPerformanceData
+    data: Partial<Workout> | WorkoutPerformanceData,
+    expected?: WorkoutIdentity
   ): Promise<Workout | null> => {
     setLoading(true)
     setError(null)
@@ -143,7 +147,7 @@ export function useUpdateWorkout() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(expected ? { ...data, _expect: expected } : data),
       })
 
       const result = await response.json()
@@ -173,13 +177,15 @@ export function useDeleteWorkout() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const deleteWorkout = async (id: string): Promise<boolean> => {
+  const deleteWorkout = async (id: string, expected?: WorkoutIdentity): Promise<boolean> => {
     setLoading(true)
     setError(null)
 
     try {
       const response = await fetch(`/api/sheets/workouts/${id}`, {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expect: expected }),
       })
 
       const result = await response.json()

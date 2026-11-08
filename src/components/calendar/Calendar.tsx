@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react'
 import { Workout } from '@/types/workout'
 import { CalendarDay } from './CalendarDay'
 import { DayDetailModal } from './DayDetailModal'
+import { parseSheetDate } from '@/lib/utils/dates'
 
 interface CalendarProps {
   workouts: Workout[]
@@ -45,12 +46,12 @@ export function Calendar({ workouts, onRefetch }: CalendarProps) {
     // week the first saved workout comes from.
     let week1Monday: Date | null = null
     const savedWithDates = workouts
-      .filter(w => w.lastSaved && DAY_OFFSETS[w.day] !== undefined)
+      .filter(w => parseSheetDate(w.lastSaved) && DAY_OFFSETS[w.day] !== undefined)
       .sort((a, b) => (a.week * 10 + a.day) - (b.week * 10 + b.day))
 
     if (savedWithDates.length > 0) {
       const saved = savedWithDates[0]
-      const savedDate = new Date(saved.lastSaved!)
+      const savedDate = parseSheetDate(saved.lastSaved)!
       savedDate.setHours(0, 0, 0, 0)
       const savedRestWeekOffset = saved.week > 12 ? 7 : 0
       const totalOffset = (saved.week - 1) * 7 + (DAY_OFFSETS[saved.day] ?? 0) + savedRestWeekOffset
@@ -67,8 +68,8 @@ export function Calendar({ workouts, onRefetch }: CalendarProps) {
     // Saved workouts never appear in the second pass, so a workout saved in
     // a different month won't leak into the current month via schedule calc.
     workouts.forEach(w => {
-      if (!w.lastSaved) return
-      const date = new Date(w.lastSaved)
+      const date = parseSheetDate(w.lastSaved)
+      if (!date) return
       if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
         const dayNum = date.getDate()
         const key = String(dayNum)

@@ -1,11 +1,5 @@
 // Application configuration constants
 
-export const APP_CONFIG = {
-  name: 'Workout Tracker',
-  description: 'Track your workouts with Google Sheets',
-  version: '0.1.0',
-} as const
-
 export const GOOGLE_SHEETS_CONFIG = {
   spreadsheetId: process.env.GOOGLE_SHEET_ID || '',
   sheetName: 'Workouts', // Default sheet name

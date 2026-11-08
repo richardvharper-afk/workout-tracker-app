@@ -12,7 +12,9 @@ import { FullPageSpinner } from '@/components/ui/Spinner'
 export default function CalendarPage() {
   const { workouts, loading, error, refetch } = useWorkouts()
 
-  if (loading) {
+  // Only block on the very first load. Refetches after an edit must not unmount the
+  // calendar, or the visible month and selected day reset.
+  if (loading && workouts.length === 0 && !error) {
     return <FullPageSpinner />
   }
 

@@ -3,6 +3,27 @@ import { Workout, WorkoutFormData, WorkoutPerformanceData, WorkoutFilters } from
 import { mapRowToWorkout, mapWorkoutToRow } from './mapper'
 import { GOOGLE_SHEETS_CONFIG } from '@/constants/config'
 
+/** What the caller believes lives at a row number. Used to detect stale row IDs. */
+export type WorkoutIdentity = Pick<Workout, 'week' | 'day' | 'exercise'>
+
+export class WorkoutMismatchError extends Error {
+  constructor() {
+    super('This row changed in the sheet. Refresh and try again.')
+    this.name = 'WorkoutMismatchError'
+  }
+}
+
+function assertSameWorkout(existing: Workout, expected?: WorkoutIdentity) {
+  if (!expected) return
+  if (
+    existing.exercise.trim() !== expected.exercise.trim() ||
+    existing.week !== expected.week ||
+    existing.day !== expected.day
+  ) {
+    throw new WorkoutMismatchError()
+  }
+}
+
 export class WorkoutsService {
   constructor(private client: GoogleSheetsClient) {}
 
@@ -78,7 +99,11 @@ export class WorkoutsService {
   /**
    * Update an existing workout
    */
-  async updateWorkout(id: string, data: Partial<Workout>): Promise<Workout> {
+  async updateWorkout(
+    id: string,
+    data: Partial<Workout>,
+    expected?: WorkoutIdentity
+  ): Promise<Workout> {
     const rowNumber = parseInt(id, 10)
 
     if (isNaN(rowNumber) || rowNumber < GOOGLE_SHEETS_CONFIG.dataStartRow) {
@@ -92,17 +117,24 @@ export class WorkoutsService {
       throw new Error('Workout not found')
     }
 
-    // Merge with updates
-    // Only update lastSaved if explicitly provided in data, or if we're marking as done for the first time
-    const shouldUpdateTimestamp =
-      data.lastSaved !== undefined ||
-      (data.done === true && !existingWorkout.done)
+    assertSameWorkout(existingWorkout, expected)
+
+    // lastSaved rules (editing a past workout must never move it on the calendar):
+    // 1. An explicit lastSaved in the request wins (date override).
+    // 2. Otherwise an existing timestamp is kept as-is.
+    // 3. Otherwise stamp now, but only when the workout is being marked done.
+    let lastSaved = existingWorkout.lastSaved
+    if (data.lastSaved !== undefined) {
+      lastSaved = data.lastSaved || undefined
+    } else if (!existingWorkout.lastSaved && (data.done === true || existingWorkout.done)) {
+      lastSaved = new Date().toISOString()
+    }
 
     const updatedWorkout: Workout = {
       ...existingWorkout,
       ...data,
       id,
-      lastSaved: shouldUpdateTimestamp ? (data.lastSaved || new Date().toISOString()) : existingWorkout.lastSaved,
+      lastSaved,
     }
 
     // Update the row
@@ -113,59 +145,21 @@ export class WorkoutsService {
   }
 
   /**
-   * Update workout performance (during workout)
-   */
-  async updateWorkoutPerformance(
-    id: string,
-    data: WorkoutPerformanceData
-  ): Promise<Workout> {
-    return this.updateWorkout(id, {
-      ...data,
-      lastSaved: new Date().toISOString(),
-    })
-  }
-
-  /**
    * Delete a workout
    */
-  async deleteWorkout(id: string): Promise<void> {
+  async deleteWorkout(id: string, expected?: WorkoutIdentity): Promise<void> {
     const rowNumber = parseInt(id, 10)
 
     if (isNaN(rowNumber) || rowNumber < GOOGLE_SHEETS_CONFIG.dataStartRow) {
       throw new Error('Invalid workout ID')
     }
 
+    if (expected) {
+      const existing = await this.getWorkout(id)
+      if (!existing) throw new Error('Workout not found')
+      assertSameWorkout(existing, expected)
+    }
+
     await this.client.deleteRow(rowNumber)
-  }
-
-  /**
-   * Mark workout as done
-   */
-  async markWorkoutDone(id: string, done: boolean = true): Promise<Workout> {
-    return this.updateWorkout(id, {
-      done,
-      lastSaved: new Date().toISOString(),
-    })
-  }
-
-  /**
-   * Get workouts for a specific week
-   */
-  async getWorkoutsForWeek(week: number): Promise<Workout[]> {
-    return this.getWorkouts({ week })
-  }
-
-  /**
-   * Get workouts for a specific day
-   */
-  async getWorkoutsForDay(week: number, day: number): Promise<Workout[]> {
-    return this.getWorkouts({ week, day })
-  }
-
-  /**
-   * Get incomplete workouts
-   */
-  async getIncompleteWorkouts(): Promise<Workout[]> {
-    return this.getWorkouts({ done: false })
   }
 }

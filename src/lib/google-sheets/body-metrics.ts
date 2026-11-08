@@ -3,7 +3,8 @@ import { GoogleSheetsAuth } from './auth'
 import { GoogleAuthTokens, BODY_METRICS_COLUMNS } from '@/types/sheets'
 import { BodyMetric, BodyMetricFormData } from '@/types/body-metrics'
 import { parseDecimal } from '@/lib/utils/number'
-import { parseISO, format, startOfWeek, differenceInWeeks } from 'date-fns'
+import { normaliseDateString } from '@/lib/utils/dates'
+import { parseISO, format } from 'date-fns'
 
 const SHEET_NAME = 'Body Metrics'
 
@@ -11,8 +12,6 @@ const SHEET_NAME = 'Body Metrics'
  * Convert a sheet row to a BodyMetric object
  */
 function mapRowToBodyMetric(row: any[], rowIndex: number): BodyMetric {
-  console.log('mapRowToBodyMetric - raw row:', row, 'rowIndex:', rowIndex)
-
   const parseOptionalNumber = (value: any): number | undefined => parseDecimal(value)
 
   const getString = (value: any): string => {
@@ -22,7 +21,7 @@ function mapRowToBodyMetric(row: any[], rowIndex: number): BodyMetric {
 
   const metric = {
     id: rowIndex.toString(),
-    date: getString(row[BODY_METRICS_COLUMNS.DATE]),
+    date: normaliseDateString(row[BODY_METRICS_COLUMNS.DATE]),
     bodyweight: parseOptionalNumber(row[BODY_METRICS_COLUMNS.BODYWEIGHT]),
     waist: parseOptionalNumber(row[BODY_METRICS_COLUMNS.WAIST]),
     chest: parseOptionalNumber(row[BODY_METRICS_COLUMNS.CHEST]),
@@ -33,7 +32,6 @@ function mapRowToBodyMetric(row: any[], rowIndex: number): BodyMetric {
     notes: getString(row[BODY_METRICS_COLUMNS.NOTES]) || undefined,
   }
 
-  console.log('mapRowToBodyMetric - mapped metric:', metric)
   return metric
 }
 
@@ -84,30 +82,7 @@ export class BodyMetricsService {
    */
   async getAllMetrics(): Promise<BodyMetric[]> {
     const rows = await this.client.getRows(`${SHEET_NAME}!A2:J`)
-    console.log('Body Metrics - raw rows from sheet:', rows)
     return rows.map((row, index) => mapRowToBodyMetric(row, index + 2))
-  }
-
-  /**
-   * Get the most recent body metric on or before a given date
-   */
-  async getMetricOnOrBeforeDate(targetDate: Date): Promise<BodyMetric | null> {
-    const metrics = await this.getAllMetrics()
-
-    // Filter metrics on or before target date and sort descending
-    const validMetrics = metrics
-      .filter(m => {
-        if (!m.date) return false
-        const metricDate = parseISO(m.date)
-        return metricDate <= targetDate
-      })
-      .sort((a, b) => {
-        const dateA = parseISO(a.date)
-        const dateB = parseISO(b.date)
-        return dateB.getTime() - dateA.getTime()
-      })
-
-    return validMetrics[0] || null
   }
 
   /**
@@ -130,29 +105,17 @@ export class BodyMetricsService {
   }
 
   /**
-   * Find existing entry for today's date, or return null
-   */
-  async findEntryForDate(date: Date): Promise<BodyMetric | null> {
-    const dateString = format(date, 'yyyy-MM-dd')
-    const metrics = await this.getAllMetrics()
-    return metrics.find(m => m.date === dateString) || null
-  }
-
-  /**
    * Create or update body metrics for today
    */
   async saveMetrics(
     formData: BodyMetricFormData,
-    programStartDate: Date
+    _programStartDate?: Date
   ): Promise<BodyMetric> {
-    const today = new Date()
-    const dateString = format(today, 'yyyy-MM-dd')
+    const dateString = format(new Date(), 'yyyy-MM-dd')
 
-    console.log('saveMetrics - today:', dateString, 'formData:', formData)
-
-    // Check if entry exists for today
-    const existing = await this.findEntryForDate(today)
-    console.log('saveMetrics - existing entry:', existing)
+    // Single read of the sheet: used to find today's row and the next empty row
+    const allMetrics = await this.getAllMetrics()
+    const existing = allMetrics.find(m => m.date === dateString) || null
 
     const metric: BodyMetric = {
       id: existing?.id || '',
@@ -170,24 +133,18 @@ export class BodyMetricsService {
     const row = mapBodyMetricToRow(metric)
 
     if (existing) {
-      // Update existing row
-      console.log('saveMetrics - updating existing row:', existing.id)
       await this.client.updateRow(parseInt(existing.id), row, SHEET_NAME)
       metric.id = existing.id
     } else {
-      // Find first empty row (after existing data)
-      const allMetrics = await this.getAllMetrics()
+      // Header is row 1, so the first data row is 2
       const maxId = allMetrics.length > 0
         ? Math.max(...allMetrics.map(m => parseInt(m.id) || 0))
-        : 1 // Header is row 1, so first data row is 2
+        : 1
       const newRowIndex = maxId + 1
-
-      console.log('saveMetrics - inserting at row:', newRowIndex)
       await this.client.updateRow(newRowIndex, row, SHEET_NAME)
       metric.id = newRowIndex.toString()
     }
 
-    console.log('saveMetrics - returning metric:', metric)
     return metric
   }
 }

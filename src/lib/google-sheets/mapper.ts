@@ -1,5 +1,6 @@
 import { Workout, WorkoutType, WorkoutSection } from '@/types/workout'
 import { SHEET_COLUMNS } from '@/types/sheets'
+import { parseDecimal } from '@/lib/utils/number'
 
 /**
  * Convert a sheet row to a Workout object
@@ -10,9 +11,9 @@ export function mapRowToWorkout(row: any[], rowIndex: number): Workout {
     if (value === null || value === undefined || value === '') return 0
     if (typeof value === 'number') return value
     const str = String(value)
-    // Try direct parse first
-    const direct = parseFloat(str)
-    if (!isNaN(direct)) return direct
+    // Try direct parse first (accepts comma or period decimals)
+    const direct = parseDecimal(str)
+    if (direct !== undefined) return direct
     // Extract number from strings like "Day 1", "Week 3"
     const match = str.match(/(\d+)/)
     return match ? parseInt(match[1], 10) : 0
@@ -20,9 +21,7 @@ export function mapRowToWorkout(row: any[], rowIndex: number): Workout {
 
   // Helper to safely parse optional numbers
   const parseOptionalNumber = (value: any): number | undefined => {
-    if (value === null || value === undefined || value === '') return undefined
-    const num = typeof value === 'string' ? parseFloat(value) : Number(value)
-    return isNaN(num) ? undefined : num
+    return parseDecimal(value)
   }
 
   // Helper to safely get string value
@@ -68,7 +67,7 @@ export function mapRowToWorkout(row: any[], rowIndex: number): Workout {
     videoUrl: getString(row[SHEET_COLUMNS.VIDEO_URL]) || undefined,
     rowIndex: getString(row[SHEET_COLUMNS.ROW_INDEX]) || undefined,
     muscleGroup: getString(row[SHEET_COLUMNS.MUSCLE_GROUP]) || undefined,
-    isBodyweight: getString(row[SHEET_COLUMNS.IS_BODYWEIGHT]).toLowerCase() === 'yes',
+    isBodyweight: getString(row[SHEET_COLUMNS.IS_BODYWEIGHT]).trim().toLowerCase() === 'yes',
     ownNote: getString(row[SHEET_COLUMNS.OWN_NOTE]) || undefined,
   }
 }
@@ -80,8 +79,17 @@ export function mapWorkoutToRow(workout: Workout): any[] {
   const row = new Array(26).fill('') // Initialize with 26 empty cells
 
   // Helper to format optional values
-  const formatOptional = (value: any): string => {
-    return value !== undefined && value !== null ? String(value) : ''
+  // Send real numbers (not strings) so Sheets stores numeric cells regardless of
+  // the spreadsheet locale (en-ZA uses a comma decimal separator).
+  const formatOptional = (value: any): number | string => {
+    return typeof value === 'number' && !isNaN(value) ? value : ''
+  }
+
+  // Load is free text ("22.5kg", "BW"), but a bare number must stay numeric
+  const formatLoad = (value: string | undefined): number | string => {
+    if (!value) return ''
+    const n = /^\s*\d+([.,]\d+)?\s*$/.test(value) ? parseDecimal(value) : undefined
+    return n !== undefined ? n : value
   }
 
   row[SHEET_COLUMNS.WEEK] = workout._rawWeek ?? workout.week
@@ -101,7 +109,7 @@ export function mapWorkoutToRow(workout: Workout): any[] {
   row[SHEET_COLUMNS.SET3] = formatOptional(workout.set3)
   row[SHEET_COLUMNS.SET4] = formatOptional(workout.set4)
   row[SHEET_COLUMNS.SET5] = formatOptional(workout.set5)
-  row[SHEET_COLUMNS.LOAD] = workout.load || ''
+  row[SHEET_COLUMNS.LOAD] = formatLoad(workout.load)
   row[SHEET_COLUMNS.AVG_RIR] = formatOptional(workout.avgRir)
   row[SHEET_COLUMNS.DONE] = workout.done ? 'TRUE' : 'FALSE'
   row[SHEET_COLUMNS.LAST_SAVED] = workout.lastSaved || ''
@@ -112,27 +120,6 @@ export function mapWorkoutToRow(workout: Workout): any[] {
   row[SHEET_COLUMNS.OWN_NOTE] = workout.ownNote || ''
 
   return row
-}
-
-/**
- * Calculate average RIR from set values
- */
-export function calculateAvgRir(
-  set1?: number,
-  set2?: number,
-  set3?: number,
-  set4?: number,
-  set5?: number,
-  plannedSets: number = 3
-): number | undefined {
-  const sets = [set1, set2, set3, set4, set5].filter(
-    (s): s is number => s !== undefined && s !== null
-  )
-
-  if (sets.length === 0) return undefined
-
-  const total = sets.reduce((sum, s) => sum + s, 0)
-  return Math.round((total / sets.length) * 10) / 10 // Round to 1 decimal
 }
 
 /**

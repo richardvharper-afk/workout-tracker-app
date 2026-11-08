@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/utils/auth'
 import { GoogleSheetsClient } from '@/lib/google-sheets/client'
-import { WorkoutsService } from '@/lib/google-sheets/workouts'
+import { WorkoutsService, WorkoutMismatchError } from '@/lib/google-sheets/workouts'
 import { googleAuth } from '@/lib/google-sheets/auth'
 import { validateWorkout } from '@/lib/google-sheets/mapper'
 
@@ -74,8 +74,9 @@ export async function PUT(
 
     const { id } = params
 
-    // Parse request body
-    const body = await request.json()
+    // Parse request body. `_expect` identifies the row the client thinks it is
+    // editing; it is verified server-side and never written to the sheet.
+    const { _expect: expected, ...body } = await request.json()
 
     // Only run full validation if this is a full workout update (has exercise field)
     // Skip validation for partial/performance updates (set1-5, load, done, etc.)
@@ -96,7 +97,7 @@ export async function PUT(
     const service = new WorkoutsService(client)
 
     // Update workout
-    const workout = await service.updateWorkout(id, body)
+    const workout = await service.updateWorkout(id, body, expected)
 
     return NextResponse.json({
       success: true,
@@ -104,6 +105,10 @@ export async function PUT(
     })
   } catch (error: any) {
     console.error('Error updating workout:', error)
+
+    if (error instanceof WorkoutMismatchError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 409 })
+    }
 
     // Handle not found errors
     if (error.message === 'Workout not found') {
@@ -140,34 +145,33 @@ export async function DELETE(
 
     const { id } = params
 
+    // Optional identity check body: { expect: { week, day, exercise } }
+    let expected
+    try {
+      expected = (await request.json())?.expect
+    } catch {
+      expected = undefined
+    }
+
     // Initialize Google Sheets client
     const client = new GoogleSheetsClient(googleAuth)
     await client.initialize(tokens)
 
     const service = new WorkoutsService(client)
 
-    // Verify workout exists before deleting
-    const existing = await service.getWorkout(id)
-    if (!existing) {
-      return NextResponse.json(
-        { success: false, error: 'Workout not found' },
-        { status: 404 }
-      )
-    }
-
-    console.log(`Deleting workout id=${id}, exercise="${existing.exercise}", week=${existing.week}, day=${existing.day}`)
-
-    // Delete workout
-    await service.deleteWorkout(id)
-
-    console.log(`Delete completed for workout id=${id}`)
+    // Verifies the row still holds the expected workout, then deletes it
+    await service.deleteWorkout(id, expected)
 
     return NextResponse.json({
       success: true,
       message: 'Workout deleted successfully',
     })
   } catch (error: any) {
-    console.error('Error deleting workout:', error?.message, error?.stack)
+    console.error('Error deleting workout:', error?.message)
+
+    if (error instanceof WorkoutMismatchError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 409 })
+    }
 
     // Handle not found errors
     if (error.message === 'Workout not found') {

@@ -3,6 +3,8 @@ import { GoogleSheetsAuth } from './auth'
 import { GoogleAuthTokens, SESSIONS_COLUMNS } from '@/types/sheets'
 import { Session, SessionFormData } from '@/types/session'
 import { format } from 'date-fns'
+import { parseDecimal } from '@/lib/utils/number'
+import { normaliseDateString } from '@/lib/utils/dates'
 
 const SHEET_NAME = 'Sessions'
 
@@ -10,13 +12,7 @@ const SHEET_NAME = 'Sessions'
  * Convert a sheet row to a Session object
  */
 function mapRowToSession(row: any[], rowIndex: number): Session {
-  const parseOptionalNumber = (value: any): number | undefined => {
-    if (value === null || value === undefined || value === '') return undefined
-    // Handle European decimal format (comma instead of period)
-    const normalized = typeof value === 'string' ? value.replace(',', '.') : value
-    const num = typeof normalized === 'string' ? parseFloat(normalized) : Number(normalized)
-    return isNaN(num) ? undefined : num
-  }
+  const parseOptionalNumber = (value: any): number | undefined => parseDecimal(value)
 
   const parseNumber = (value: any): number => {
     if (value === null || value === undefined || value === '') return 0
@@ -37,7 +33,7 @@ function mapRowToSession(row: any[], rowIndex: number): Session {
     duration: parseOptionalNumber(row[SESSIONS_COLUMNS.DURATION]),
     calories: parseOptionalNumber(row[SESSIONS_COLUMNS.CALORIES]),
     rpe: parseOptionalNumber(row[SESSIONS_COLUMNS.RPE]),
-    date: getString(row[SESSIONS_COLUMNS.DATE]) || undefined,
+    date: normaliseDateString(row[SESSIONS_COLUMNS.DATE]) || undefined,
   }
 }
 
@@ -47,8 +43,9 @@ function mapRowToSession(row: any[], rowIndex: number): Session {
 function mapSessionToRow(session: Session): any[] {
   const row = new Array(6).fill('')
 
-  const formatOptional = (value: any): string => {
-    return value !== undefined && value !== null ? String(value) : ''
+  // Real numbers, not strings: avoids locale mis-parsing of decimals (en-ZA)
+  const formatOptional = (value: any): number | string => {
+    return typeof value === 'number' && !isNaN(value) ? value : ''
   }
 
   row[SESSIONS_COLUMNS.WEEK] = session.week
@@ -101,11 +98,7 @@ export class SessionsService {
     day: number,
     formData: SessionFormData
   ): Promise<Session> {
-    console.log('saveSession called with:', { week, day, formData })
-
-    // Check if session exists
     const existing = await this.getSession(week, day)
-    console.log('Existing session:', existing)
 
     const session: Session = {
       id: existing?.id || '',
@@ -114,23 +107,18 @@ export class SessionsService {
       duration: formData.duration,
       calories: formData.calories,
       rpe: formData.rpe,
-      date: format(new Date(), 'yyyy-MM-dd'), // Auto-populate current date
+      // Explicit override wins; otherwise keep the original date so re-saving a
+      // past session doesn't re-date it to today.
+      date: formData.date || existing?.date || format(new Date(), 'yyyy-MM-dd'),
     }
-    console.log('Session to save:', session)
 
     const row = mapSessionToRow(session)
-    console.log('Mapped row:', row)
 
     if (existing) {
-      // Update existing row in Sessions sheet
-      console.log('Updating existing session at row:', existing.id)
       await this.client.updateRow(parseInt(existing.id), row, SHEET_NAME)
       session.id = existing.id
     } else {
-      // Append new row to Sessions sheet
-      console.log('Appending new session to Sessions sheet')
       const newRowIndex = await this.client.appendRow(row, SHEET_NAME)
-      console.log('New row index:', newRowIndex)
       session.id = newRowIndex.toString()
     }
 

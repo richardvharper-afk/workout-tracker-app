@@ -15,6 +15,7 @@ export interface SessionFormData {
   duration?: number
   calories?: number
   rpe?: number
+  date?: string // Optional explicit override (YYYY-MM-DD)
 }
 
 // API response types

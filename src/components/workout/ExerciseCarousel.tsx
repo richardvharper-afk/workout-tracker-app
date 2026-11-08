@@ -173,19 +173,11 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
         return b.day - a.day
       })
 
-    console.log('Overload calc for:', currentExercise.exercise, 'Week', currentExercise.week, 'Day', currentExercise.day)
-    console.log('Previous instances found:', previousInstances.length)
-    if (previousInstances.length > 0) {
-      console.log('Most recent:', previousInstances[0].week, previousInstances[0].day)
-    }
-
     if (previousInstances.length === 0) return null
     const mostRecentInstance = previousInstances[0]
 
     const prevVolume = calculateWorkoutVolume(mostRecentInstance, bodyweightKg)
     const currentVolume = calculateWorkoutVolume(currentExercise, bodyweightKg)
-
-    console.log('Previous volume:', prevVolume, 'Current volume:', currentVolume)
 
     if (prevVolume === 0) return null
     if (currentVolume === 0) return null
@@ -367,7 +359,11 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
 
   const handleSave = async () => {
     if (!currentExercise) return
-    const result = await updateWorkout(currentExercise.id, performanceData)
+    const result = await updateWorkout(currentExercise.id, performanceData, {
+      week: currentExercise.week,
+      day: currentExercise.day,
+      exercise: currentExercise.exercise,
+    })
     if (result) {
       setHasChanges(false)
       setPrefilledFrom(null)
@@ -405,7 +401,6 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
         calories: sessionData.calories,
         rpe: sessionData.rpe,
       }
-      console.log('Saving session with payload:', payload)
       const response = await fetch('/api/sheets/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

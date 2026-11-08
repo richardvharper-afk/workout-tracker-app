@@ -1,4 +1,4 @@
-import { mapRowToWorkout, mapWorkoutToRow, calculateAvgRir, validateWorkout } from '@/lib/google-sheets/mapper'
+import { mapRowToWorkout, mapWorkoutToRow, validateWorkout } from '@/lib/google-sheets/mapper'
 import { SHEET_COLUMNS } from '@/types/sheets'
 
 function makeRow(): any[] {
@@ -92,7 +92,7 @@ describe('mapWorkoutToRow', () => {
     const workout = mapRowToWorkout(row, 5)
     const outputRow = mapWorkoutToRow(workout)
 
-    expect(outputRow).toHaveLength(24)
+    expect(outputRow).toHaveLength(26)
     expect(outputRow[SHEET_COLUMNS.TYPE]).toBe('Upper Body')
     expect(outputRow[SHEET_COLUMNS.EXERCISE]).toBe('Bench Press')
     expect(outputRow[SHEET_COLUMNS.DONE]).toBe('TRUE')
@@ -125,24 +125,6 @@ describe('mapWorkoutToRow', () => {
     expect(outputRow[SHEET_COLUMNS.SET1]).toBe('')
     expect(outputRow[SHEET_COLUMNS.LOAD]).toBe('')
     expect(outputRow[SHEET_COLUMNS.DONE]).toBe('FALSE')
-  })
-})
-
-describe('calculateAvgRir', () => {
-  it('returns undefined for no sets', () => {
-    expect(calculateAvgRir()).toBeUndefined()
-  })
-
-  it('calculates average of provided sets', () => {
-    expect(calculateAvgRir(2, 3, 2)).toBe(2.3)
-  })
-
-  it('skips undefined sets', () => {
-    expect(calculateAvgRir(4, undefined, 2)).toBe(3)
-  })
-
-  it('rounds to 1 decimal', () => {
-    expect(calculateAvgRir(1, 2, 3)).toBe(2)
   })
 })
 
@@ -188,5 +170,27 @@ describe('validateWorkout', () => {
   it('validates sets range', () => {
     const errors = validateWorkout({ exercise: 'A', type: 'Core', section: 'Core', sets: 11 })
     expect(errors).toContain('Sets must be between 1 and 10')
+  })
+})
+
+describe('decimal handling (en-ZA)', () => {
+  it('reads comma decimals from the sheet', () => {
+    const row = makeRow()
+    row[SHEET_COLUMNS.AVG_RIR] = '1,5'
+    expect(mapRowToWorkout(row, 2).avgRir).toBe(1.5)
+  })
+
+  it('writes numeric columns as numbers, not strings', () => {
+    const workout = mapRowToWorkout(makeRow(), 5)
+    const out = mapWorkoutToRow(workout)
+    expect(out[SHEET_COLUMNS.SET1]).toBe(10)
+    expect(out[SHEET_COLUMNS.AVG_RIR]).toBe(2.5)
+  })
+
+  it('writes a bare-number load as a number but keeps text loads', () => {
+    const w = mapRowToWorkout(makeRow(), 5)
+    expect(mapWorkoutToRow({ ...w, load: '22.5' })[SHEET_COLUMNS.LOAD]).toBe(22.5)
+    expect(mapWorkoutToRow({ ...w, load: '22,5' })[SHEET_COLUMNS.LOAD]).toBe(22.5)
+    expect(mapWorkoutToRow({ ...w, load: '22.5kg' })[SHEET_COLUMNS.LOAD]).toBe('22.5kg')
   })
 })

@@ -44,7 +44,7 @@ export default function WorkoutDetailPage() {
     load: '',
     avgRir: undefined,
     done: false,
-    notes: '',
+    ownNote: '',
   })
 
   React.useEffect(() => {
@@ -59,12 +59,12 @@ export default function WorkoutDetailPage() {
           load: workout.load || '',
           avgRir: workout.avgRir,
           done: workout.done,
-          notes: workout.notes || '',
+          ownNote: workout.ownNote || '',
         })
       } else {
         setPerformanceData({
           set1: undefined, set2: undefined, set3: undefined, set4: undefined, set5: undefined,
-          load: '', avgRir: undefined, done: false, notes: '',
+          load: '', avgRir: undefined, done: false, ownNote: '',
         })
       }
     }
@@ -84,7 +84,7 @@ export default function WorkoutDetailPage() {
   }
 
   const handleSave = async () => {
-    const result = await updateWorkout(id, performanceData)
+    const result = await updateWorkout(id, performanceData, workout ? { week: workout.week, day: workout.day, exercise: workout.exercise } : undefined)
     if (result) {
       setHasChanges(false)
       refetch()
@@ -92,7 +92,7 @@ export default function WorkoutDetailPage() {
   }
 
   const handleDelete = async () => {
-    const success = await deleteWorkout(id)
+    const success = await deleteWorkout(id, workout ? { week: workout.week, day: workout.day, exercise: workout.exercise } : undefined)
     if (success) {
       router.push('/workouts')
       router.refresh()
@@ -208,11 +208,11 @@ export default function WorkoutDetailPage() {
 
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1">
-                Notes
+                My notes
               </label>
               <textarea
-                value={performanceData.notes}
-                onChange={(e) => handleFieldChange('notes', e.target.value)}
+                value={performanceData.ownNote || ''}
+                onChange={(e) => handleFieldChange('ownNote', e.target.value)}
                 rows={3}
                 className="input"
                 placeholder="Optional notes"

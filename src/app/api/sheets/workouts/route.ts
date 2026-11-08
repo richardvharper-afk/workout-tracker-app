@@ -54,7 +54,6 @@ export async function GET(request: NextRequest) {
       data: workouts,
       metadata: {
         total: workouts.length,
-        filtered: Object.keys(filters).length > 0 ? workouts.length : workouts.length,
       },
     })
   } catch (error: any) {
