@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { APP_VERSION, WHATS_NEW } from '@/constants/version'
 import { BodyMetric, BodyMetricFormData } from '@/types/body-metrics'
+import { parseDecimal } from '@/lib/utils/number'
 import Link from 'next/link'
 
 export default function ProfilePage() {
@@ -88,8 +89,7 @@ export default function ProfilePage() {
       setMetrics(prev => ({ ...prev, notes: value }))
     } else {
       setRawInputs(prev => ({ ...prev, [field]: value }))
-      const parsed = value ? parseFloat(value) : undefined
-      setMetrics(prev => ({ ...prev, [field]: !value || isNaN(parsed!) ? undefined : parsed }))
+      setMetrics(prev => ({ ...prev, [field]: parseDecimal(value) }))
     }
     setSaved(false)
   }

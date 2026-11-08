@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { RestTimer } from '@/components/workout/RestTimer'
+import { useRestTimer } from '@/components/providers/RestTimerProvider'
 import { Session, SessionFormData } from '@/types/session'
 
 const typeColors: Record<string, string> = {
@@ -196,8 +197,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
   }, [currentExercise, workouts, bodyweightKg])
 
   // Rest Timer state
-  const [showTimer, setShowTimer] = useState(false)
-  const [timerKey, setTimerKey] = useState(0)
+  const { start: startRestTimer } = useRestTimer()
 
   // Previous week data for reference labels
   const [previousWeekValues, setPreviousWeekValues] = useState<{
@@ -380,8 +380,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
       } else {
         // Between sets — start rest timer, stay on exercise
         if (currentExercise.rest) {
-          setTimerKey(prev => prev + 1)
-          setShowTimer(true)
+          startRestTimer(currentExercise.rest)
         }
       }
       refetch()
@@ -660,16 +659,7 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
           </div>
 
           {/* Rest Timer */}
-          {showTimer && currentExercise.rest && (
-            <RestTimer
-              key={timerKey}
-              restString={currentExercise.rest}
-              onComplete={() => {
-                setTimeout(() => setShowTimer(false), 3000)
-              }}
-              onSkip={() => setShowTimer(false)}
-            />
-          )}
+          <RestTimer />
 
           {/* Exercise Notes (collapsed by default, read-only) */}
           {currentExercise.notes && (

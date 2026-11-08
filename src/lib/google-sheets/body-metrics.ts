@@ -2,6 +2,7 @@ import { GoogleSheetsClient } from './client'
 import { GoogleSheetsAuth } from './auth'
 import { GoogleAuthTokens, BODY_METRICS_COLUMNS } from '@/types/sheets'
 import { BodyMetric, BodyMetricFormData } from '@/types/body-metrics'
+import { parseDecimal } from '@/lib/utils/number'
 import { parseISO, format, startOfWeek, differenceInWeeks } from 'date-fns'
 
 const SHEET_NAME = 'Body Metrics'
@@ -12,13 +13,7 @@ const SHEET_NAME = 'Body Metrics'
 function mapRowToBodyMetric(row: any[], rowIndex: number): BodyMetric {
   console.log('mapRowToBodyMetric - raw row:', row, 'rowIndex:', rowIndex)
 
-  const parseOptionalNumber = (value: any): number | undefined => {
-    if (value === null || value === undefined || value === '') return undefined
-    // Handle European decimal format (comma instead of period)
-    const normalized = typeof value === 'string' ? value.replace(',', '.') : value
-    const num = typeof normalized === 'string' ? parseFloat(normalized) : Number(normalized)
-    return isNaN(num) ? undefined : num
-  }
+  const parseOptionalNumber = (value: any): number | undefined => parseDecimal(value)
 
   const getString = (value: any): string => {
     if (value === null || value === undefined) return ''
@@ -48,8 +43,10 @@ function mapRowToBodyMetric(row: any[], rowIndex: number): BodyMetric {
 function mapBodyMetricToRow(metric: BodyMetric): any[] {
   const row = new Array(9).fill('')
 
-  const formatOptional = (value: any): string => {
-    return value !== undefined && value !== null ? String(value) : ''
+  // Send real numbers (not strings) so Sheets stores them as numeric values
+  // regardless of the spreadsheet locale (en-ZA uses a comma decimal separator).
+  const formatOptional = (value: any): number | string => {
+    return typeof value === 'number' && !isNaN(value) ? value : ''
   }
 
   row[BODY_METRICS_COLUMNS.DATE] = metric.date
@@ -165,6 +162,7 @@ export class BodyMetricsService {
       chest: formData.chest,
       shoulders: formData.shoulders,
       leftBicep: formData.leftBicep,
+      rightBicep: formData.rightBicep,
       hips: formData.hips,
       notes: formData.notes,
     }

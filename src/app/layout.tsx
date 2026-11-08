@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { RestTimerProvider } from '@/components/providers/RestTimerProvider'
+import { FloatingRestTimer } from '@/components/workout/FloatingRestTimer'
 
 export const metadata: Metadata = {
   title: 'Workout Tracker',
@@ -27,7 +29,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <RestTimerProvider>
+          {children}
+          <FloatingRestTimer />
+        </RestTimerProvider>
+      </body>
     </html>
   )
 }
