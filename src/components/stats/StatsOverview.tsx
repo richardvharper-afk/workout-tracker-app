@@ -7,6 +7,8 @@ import { BodyMetric } from '@/types/body-metrics'
 import { MuscleHeatmap } from './MuscleHeatmap'
 import { MuscleLoadProgressionChart } from './MuscleLoadProgressionChart'
 import { BodyweightTrendChart } from './BodyweightTrendChart'
+import { AlertsCard } from './AlertsCard'
+import { RecentPRsCard } from './RecentPRsCard'
 import { ProgressionCards } from './ProgressionCards'
 import { Card } from '@/components/ui/Card'
 import { SessionLoadChart } from '@/components/metrics/SessionLoadChart'
@@ -16,6 +18,8 @@ import { ProgressionChart } from '@/components/metrics/ProgressionChart'
 import { calculateAllSessionLoads, calculateRollingAverage, calculateSessionLoadTrend } from '@/lib/metrics/session-load'
 import { calculateWeeklyVolume, DEFAULT_GOAL_MUSCLES, PRIORITY_MUSCLES } from '@/lib/metrics/weekly-volume'
 import { calculateMuscleLoadProgression } from '@/lib/metrics/muscle-progression'
+import { computeAlerts } from '@/lib/metrics/alerts'
+import { findPRHistory } from '@/lib/metrics/personal-records'
 import { getAnchorLifts } from '@/lib/metrics/progression'
 
 interface StatsOverviewProps {
@@ -48,6 +52,15 @@ export function StatsOverview({ workouts: allWorkouts, sessions, bodyMetric, bod
     [workouts, bodyMetric?.bodyweight]
   )
 
+  const alerts = useMemo(
+    () => computeAlerts({ workouts, weeklyVolume: weeklyVolumeData, sessionLoads: sessionLoadData, bodyweightKg: bodyMetric?.bodyweight }),
+    [workouts, weeklyVolumeData, sessionLoadData, bodyMetric?.bodyweight]
+  )
+  const prEvents = useMemo(
+    () => findPRHistory(workouts, bodyMetric?.bodyweight),
+    [workouts, bodyMetric?.bodyweight]
+  )
+
   return (
     <div className="space-y-4">
       {/* Progression Cards */}
@@ -59,6 +72,9 @@ export function StatsOverview({ workouts: allWorkouts, sessions, bodyMetric, bod
         weeklyVolumeData={weeklyVolumeData}
         priorityProgressions={priorityProgressions}
       />
+
+      {/* Alerts (hidden when nothing is triggered) */}
+      <AlertsCard alerts={alerts} />
 
       {/* Weekly Training Load */}
       <Card padding="lg">
@@ -105,6 +121,15 @@ export function StatsOverview({ workouts: allWorkouts, sessions, bodyMetric, bod
           <p className="text-sm text-text-tertiary">Are your priority muscles getting stronger?</p>
         </div>
         <MuscleLoadProgressionChart workouts={workouts} bodyweightKg={bodyMetric?.bodyweight} />
+      </Card>
+
+      {/* Personal Records */}
+      <Card padding="lg">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-text-primary">Recent PRs</h2>
+          <p className="text-sm text-text-tertiary">New best load, reps at a load, or estimated 1RM</p>
+        </div>
+        <RecentPRsCard events={prEvents} />
       </Card>
 
       {/* Bodyweight Trend */}

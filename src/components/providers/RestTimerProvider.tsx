@@ -70,6 +70,8 @@ export interface RestTimerContextValue {
   completed: boolean
   start: (restString: string) => void
   togglePause: () => void
+  /** Add or remove seconds (e.g. +15 / -15) while the timer is active */
+  adjust: (deltaSeconds: number) => void
   dismiss: () => void
 }
 
@@ -163,6 +165,16 @@ export function RestTimerProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
+  const adjust = useCallback((deltaSeconds: number) => {
+    setTimer(prev => {
+      if (!prev || completedRef.current) return prev
+      const next: StoredTimer = { ...prev, duration: Math.max(5, prev.duration + deltaSeconds) }
+      save(next)
+      return next
+    })
+    setNow(Date.now())
+  }, [])
+
   const running = !!timer && timer.pausedElapsed === null && !completed
 
   // Tick while running
@@ -210,6 +222,7 @@ export function RestTimerProvider({ children }: { children: React.ReactNode }) {
     completed,
     start,
     togglePause,
+    adjust,
     dismiss,
   }
 

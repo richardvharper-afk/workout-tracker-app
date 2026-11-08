@@ -10,6 +10,9 @@ import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { RestTimer } from '@/components/workout/RestTimer'
 import { useRestTimer } from '@/components/providers/RestTimerProvider'
+import { suggestNextTarget } from '@/lib/metrics/next-target'
+import { findPRHistory } from '@/lib/metrics/personal-records'
+import { calculateExerciseProgression } from '@/lib/metrics/progression'
 import { Session, SessionFormData } from '@/types/session'
 
 const typeColors: Record<string, string> = {
@@ -154,6 +157,35 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
     const improvement = isNewPR ? Math.round((currentNum - record.maxLoadNum) * 10) / 10 : null
     return { isPR, isNewPR, maxLoad: record.maxLoad, prWeek: record.week, prDay: record.day, improvement }
   }, [currentExercise, personalRecords, bodyweightKg])
+
+  // Next-target suggestion (double progression) from the last time this exercise was done
+  const nextTarget = useMemo(
+    () => (currentExercise ? suggestNextTarget(currentExercise, workouts, bodyweightKg) : null),
+    [currentExercise, workouts, bodyweightKg]
+  )
+
+  // Live rep / est. 1RM PR detection: treat the in-progress entry as done and see if it beats history.
+  // (Load PRs are already covered by the "New PR!" badge.)
+  const livePR = useMemo(() => {
+    if (!currentExercise) return null
+    const hasReps = [1, 2, 3, 4, 5].some(n => (performanceData as any)[`set${n}`] !== undefined)
+    if (!hasReps) return null
+    const simulated = workouts.map(w =>
+      w.id === currentExercise.id
+        ? { ...w, ...performanceData, done: true, lastSaved: w.lastSaved || new Date().toISOString() }
+        : w
+    )
+    const event = findPRHistory(simulated, bodyweightKg).find(e => e.workoutId === currentExercise.id)
+    return event && event.type !== 'load' ? event : null
+  }, [currentExercise, workouts, performanceData, bodyweightKg])
+
+  // Plateau flag for this exercise
+  const isStagnant = useMemo(() => {
+    if (!currentExercise) return false
+    const history = workouts.filter(w => w.exercise === currentExercise.exercise && w.done)
+    if (history.length < 4) return false
+    return calculateExerciseProgression(history, currentExercise.exercise, bodyweightKg).progressionStatus === 'stagnant'
+  }, [currentExercise, workouts, bodyweightKg])
 
   // Progressive Overload - compare to most recent instance of the exercise
   const overloadInfo = useMemo(() => {
@@ -570,6 +602,22 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
                       New PR!
                     </span>
                   )}
+                  {livePR && (
+                    <span
+                      className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.4)]"
+                      title={`${livePR.label}: ${livePR.value} (was ${livePR.previous})`}
+                    >
+                      {livePR.label}!
+                    </span>
+                  )}
+                  {isStagnant && !isReadOnly && (
+                    <span
+                      className="px-2 py-0.5 rounded text-xs font-medium bg-accent-amber/20 text-accent-amber"
+                      title="No load or rep progress over the last 3 sessions"
+                    >
+                      Stalled
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-sm text-text-secondary">
@@ -599,6 +647,15 @@ export function ExerciseCarousel({ workouts, refetch }: ExerciseCarouselProps) {
                 )}
               </div>
             </div>
+
+            {/* Next target */}
+            {nextTarget && !isReadOnly && (
+              <div className="rounded-lg border border-accent-cyan/30 bg-accent-cyan/5 p-3 mb-4">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Next target</p>
+                <p className="text-sm font-semibold text-accent-cyan mt-0.5">{nextTarget.headline}</p>
+                <p className="text-xs text-text-tertiary mt-0.5">{nextTarget.detail}</p>
+              </div>
+            )}
 
             {/* Description (collapsed by default) */}
             {currentExercise.description && (

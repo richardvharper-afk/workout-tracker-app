@@ -111,8 +111,9 @@ function analyzeProgressionStatus(sessions: ExerciseSession[]): {
     return { status: 'insufficient-data', stagnantCount: 0 }
   }
 
-  // Look at last 3 sessions
-  const recent = sessions.slice(-3)
+  // Look at the last 4 sessions = 3 comparisons. (With 3 sessions only 2 comparisons exist,
+  // so a 3-in-a-row stagnation could never be detected.)
+  const recent = sessions.slice(-4)
 
   let stagnantCount = 0
   let hasProgression = false
